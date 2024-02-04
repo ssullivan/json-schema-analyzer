@@ -4,7 +4,7 @@ json-schema-explorer
 A small command line utility to understand the fields, and datatypes in a JSON document.
 
 ## Requirements
-* JDK 17
+* JDK >= 17
 * Maven
 
 ## Build
@@ -14,6 +14,12 @@ contain the dependencies necessary for execution.
 
 ```shell
 mvn clean install
+```
+
+## CLI 
+```shell
+Usage: json-analyze -i=<file>
+  -i, --input-file=<file>   The JSON file to analyze
 ```
 
 ## Examples
