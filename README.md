@@ -22,13 +22,15 @@ mvn clean install
 ```shell
 cat <<EOF >example.json
 {
-  "product.enabled" : "boolean",
-  "product.name" : "string",
-  "product.weight" : "float",
-  "sizes" : [ {
-    "size" : "integer"
-  } ],
-  "version" : "integer"
+  "version": 1,
+  "product": {
+    "name": "Example",
+    "sizes": [
+      {"size" : 1 }
+    ],
+    "weight": 1.5,
+    "enabled": true
+  }
 }
 EOF
 java -jar json-schema-analyzer.jar -i example.json
