@@ -50,17 +50,24 @@ public class JsonSchemaAnalyzer {
         while (jParser.nextToken() != JsonToken.END_OBJECT) {
             JsonToken currentToken = jParser.getCurrentToken();
             String name = jParser.getCurrentName();
+            JsonType value;
             if (currentToken == JsonToken.START_OBJECT) {
                 ObjectType nested = new ObjectType();
                 handleObjectStruct(jParser, nested);
-                objectType.addField(name, nested);
+                value = nested;
             }
             else if (currentToken == JsonToken.START_ARRAY) {
-                objectType.addField(name, handleObjectArray(jParser));
+                value = handleObjectArray(jParser);
             }
             else if (currentToken.isScalarValue()) {
-                objectType.addField(name, convertScalarToken(currentToken));
+                value = convertScalarToken(currentToken);
             }
+            else {
+                continue;
+            }
+
+            JsonType existing = objectType.getFields().get(name);
+            objectType.addField(name, existing == null ? value : SchemaMerger.merge(existing, value));
         }
     }
 

@@ -9,16 +9,6 @@ public final class BooleanType implements JsonType {
         return "boolean";
     }
 
-    @Override
-    public String jsonType() {
-        return toString();
-    }
-
-    @Override
-    public int ordinal() {
-        return 3;
-    }
-
     private static final class Singleton {
         private static final BooleanType INSTANCE = new BooleanType();
     }

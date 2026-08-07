@@ -54,16 +54,6 @@ public final class ObjectType implements JsonType {
     }
 
     @Override
-    public String jsonType() {
-        return "object";
-    }
-
-    @Override
-    public int ordinal() {
-        return 5;
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

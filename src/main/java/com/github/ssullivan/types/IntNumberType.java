@@ -9,16 +9,6 @@ public final class IntNumberType implements JsonType {
         return "integer";
     }
 
-    @Override
-    public String jsonType() {
-        return "number";
-    }
-
-    @Override
-    public int ordinal() {
-        return 1;
-    }
-
     private static final class Singleton {
         private static final IntNumberType INSTANCE = new IntNumberType();
     }

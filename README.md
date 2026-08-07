@@ -107,6 +107,7 @@ cat <<EOF >example.json
   []
 ]
 EOF
+java -jar json-schema-explorer-<version>.jar -i example.json
 ```
 
 would produce the following output

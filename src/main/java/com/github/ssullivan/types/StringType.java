@@ -9,16 +9,6 @@ public final class StringType implements JsonType {
         return "string";
     }
 
-    @Override
-    public String jsonType() {
-        return "string";
-    }
-
-    @Override
-    public int ordinal() {
-        return 0;
-    }
-
     private static final class Singleton {
         private static final StringType INSTANCE = new StringType();
     }

@@ -9,16 +9,6 @@ public final class FloatNumberType implements JsonType {
         return "float";
     }
 
-    @Override
-    public String jsonType() {
-        return "number";
-    }
-
-    @Override
-    public int ordinal() {
-        return 2;
-    }
-
     private static final class Singleton {
         private static final FloatNumberType INSTANCE = new FloatNumberType();
     }

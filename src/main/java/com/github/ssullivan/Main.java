@@ -13,7 +13,7 @@ import java.util.concurrent.Callable;
 
 public class Main {
     @CommandLine.Command(name = "json-analyze")
-    private static class JsonSchemaAnalyzeCommand implements Callable<JsonType> {
+    static class JsonSchemaAnalyzeCommand implements Callable<JsonType> {
         @CommandLine.Option(names = {"-i", "--input-file"}, description = "The JSON file to analyze", required = true)
         private File file;
 

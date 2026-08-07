@@ -30,16 +30,6 @@ public final class ArrayType implements JsonType {
     }
 
     @Override
-    public String jsonType() {
-        return "array";
-    }
-
-    @Override
-    public int ordinal() {
-        return 4;
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

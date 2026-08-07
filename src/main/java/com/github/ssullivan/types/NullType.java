@@ -9,16 +9,6 @@ public final class NullType implements JsonType {
         return "null";
     }
 
-    @Override
-    public String jsonType() {
-        return toString();
-    }
-
-    @Override
-    public int ordinal() {
-        return -1;
-    }
-
     private static final class Singleton {
         private static final NullType INSTANCE = new NullType();
     }
