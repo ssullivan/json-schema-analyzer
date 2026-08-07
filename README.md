@@ -13,6 +13,7 @@ into an LLM prompt cheaply — see [Example6](#example6-llm-optimized-output).
   * [Example6: LLM-Optimized Output](#example6-llm-optimized-output)
 * [Error Handling](#error-handling)
 * [Using as a Library](#using-as-a-library)
+* [Agent Skills](#agent-skills)
 * [Versioning](#versioning)
 * [Releasing](#releasing)
 
@@ -323,6 +324,22 @@ be read (a genuine I/O error), and an unchecked `JsonSchemaAnalysisException` if
 fine but its content isn't valid or supported JSON — malformed syntax, an empty document, and so
 on. The latter's message already includes the line and column where the problem was found, so it
 can be surfaced to a caller as-is without extra formatting.
+
+## Agent Skills
+
+This repo ships a [`json-shape`](.agents/skills/json-shape/SKILL.md) skill following the
+[Agent Skills](https://agentskills.io) open standard, so an AI coding agent can infer a JSON
+document's shape — using the token-cheap `-l` notation above — without knowing this tool
+exists. It resolves a jar automatically: a local Maven build if you're inside a clone,
+otherwise the latest published release, cached under `~/.cache/json-schema-explorer/`.
+
+OpenCode, Gemini CLI, and Antigravity read `.agents/skills/` natively, so the skill works as
+soon as the repo is checked out. Claude Code reads `.claude/skills/` instead, which this repo
+bridges with a committed symlink — recreate it with:
+
+```shell
+ln -s ../../.agents/skills/json-shape .claude/skills/json-shape
+```
 
 ## Versioning
 
