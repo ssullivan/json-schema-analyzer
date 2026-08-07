@@ -38,6 +38,7 @@ public final class Json {
             public void serialize(UnionType unionType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
                 String joined = unionType.getMembers().stream()
                         .map(Json::unionMemberLabel)
+                        .distinct()
                         .sorted()
                         .collect(Collectors.joining("|"));
                 jsonGenerator.writeString(joined);

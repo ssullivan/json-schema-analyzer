@@ -108,6 +108,7 @@ public final class LlmWriter {
 
         String joined = elements.stream()
                 .map(LlmWriter::memberLabel)
+                .distinct()
                 .sorted()
                 .collect(Collectors.joining("|"));
         indent(sb, indent).append(label).append(": ").append(joined).append('\n');
@@ -117,6 +118,7 @@ public final class LlmWriter {
         if (type instanceof UnionType unionType) {
             return unionType.getMembers().stream()
                     .map(LlmWriter::memberLabel)
+                    .distinct()
                     .sorted()
                     .collect(Collectors.joining("|"));
         }
