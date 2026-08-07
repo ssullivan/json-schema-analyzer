@@ -82,6 +82,7 @@ if [ -z "$jar" ]; then
         fi
 
         mv "$tmp" "$jar"
+        rm -f "$sums"
         trap - EXIT
     fi
 fi

@@ -45,8 +45,10 @@ release version next notes_file='':
     mvn clean install
     git add -A "${exclude_notes[@]}"
     git commit -m "Release {{version}}"
+    # --cleanup=verbatim keeps lines starting with '#'. Without it git treats them as
+    # comments and silently strips every markdown heading out of the release notes.
     if [ -n "{{notes_file}}" ]; then
-        git tag -a v{{version}} -F "{{notes_file}}"
+        git tag -a v{{version}} -F "{{notes_file}}" --cleanup=verbatim
     else
         git tag -a v{{version}}
     fi
