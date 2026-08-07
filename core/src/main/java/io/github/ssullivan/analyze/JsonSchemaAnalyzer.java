@@ -36,7 +36,7 @@ public class JsonSchemaAnalyzer {
         try (JsonParser jParser = JSON_FACTORY.createParser(source)) {
             try {
                 jParser.nextToken();
-                JsonToken currentToken = jParser.getCurrentToken();
+                JsonToken currentToken = jParser.currentToken();
                 if (currentToken == JsonToken.START_OBJECT) {
                     ObjectType root = new ObjectType();
                     handleObjectStruct(jParser, root);
@@ -46,7 +46,7 @@ public class JsonSchemaAnalyzer {
                 } else if (currentToken != null && currentToken.isScalarValue()) {
                     return convertScalarToken(jParser, currentToken);
                 } else {
-                    throw JsonSchemaAnalysisException.unsupportedRoot(currentToken, jParser.getCurrentLocation());
+                    throw JsonSchemaAnalysisException.unsupportedRoot(currentToken, jParser.currentLocation());
                 }
             } catch (JsonProcessingException e) {
                 throw JsonSchemaAnalysisException.malformedJson(e);
@@ -56,8 +56,8 @@ public class JsonSchemaAnalyzer {
 
     private static void handleObjectStruct(JsonParser jParser, ObjectType objectType) throws IOException {
         while (jParser.nextToken() != JsonToken.END_OBJECT) {
-            JsonToken currentToken = jParser.getCurrentToken();
-            String name = jParser.getCurrentName();
+            JsonToken currentToken = jParser.currentToken();
+            String name = jParser.currentName();
             JsonType value;
             if (currentToken == JsonToken.START_OBJECT) {
                 ObjectType nested = new ObjectType();
@@ -82,7 +82,7 @@ public class JsonSchemaAnalyzer {
     private static ArrayType handleObjectArray(JsonParser jParser) throws IOException {
         ArrayType arrayType = new ArrayType();
         while (jParser.nextToken() != JsonToken.END_ARRAY) {
-            JsonToken currentToken = jParser.getCurrentToken();
+            JsonToken currentToken = jParser.currentToken();
 
             if (currentToken.isScalarValue()) {
                 arrayType.addField(convertScalarToken(jParser, currentToken));
@@ -118,7 +118,7 @@ public class JsonSchemaAnalyzer {
             case VALUE_NUMBER_INT -> ScalarType.INTEGER;
             case VALUE_STRING -> ScalarType.STRING;
             case VALUE_NULL -> ScalarType.NULL;
-            default -> throw JsonSchemaAnalysisException.unsupportedScalarToken(jsonToken, jParser.getCurrentLocation());
+            default -> throw JsonSchemaAnalysisException.unsupportedScalarToken(jsonToken, jParser.currentLocation());
         };
     }
 }
