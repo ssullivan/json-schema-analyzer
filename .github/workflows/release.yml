@@ -22,11 +22,15 @@ jobs:
           cache: maven
       - name: Build with Maven
         run: mvn clean verify --batch-mode
-      - name: Locate CLI jar
+      - name: Locate CLI jar and checksum it
         id: jar
+        # The checksum is written with the bare filename (not the cli/target/... path) so that
+        # `sha256sum -c` verifies correctly from whatever directory a consumer downloads into.
         run: |
           jar=$(ls cli/target/json-schema-explorer-*.jar | grep -v -e sources -e javadoc -e original)
+          (cd "$(dirname "$jar")" && sha256sum "$(basename "$jar")" > "$(basename "$jar").sha256")
           echo "path=$jar" >> "$GITHUB_OUTPUT"
+          echo "sha256=$jar.sha256" >> "$GITHUB_OUTPUT"
       - name: Create GitHub release
         # --notes-from-tag uses the annotated tag's own message as the release body, so the
         # notes written when the tag was created (see justfile's `release` recipe) carry through
@@ -34,6 +38,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" "${{ steps.jar.outputs.path }}" \
+          gh release create "${{ github.ref_name }}" \
+            "${{ steps.jar.outputs.path }}" \
+            "${{ steps.jar.outputs.sha256 }}" \
             --title "${{ github.ref_name }}" \
             --notes-from-tag
