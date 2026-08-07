@@ -142,6 +142,45 @@ class JsonSchemaAnalyzerTest {
 
     }
 
+    @Test
+    void testArrayDeduplicatesIdenticalObjectShapes() throws IOException {
+        // Given an array containing two structurally-identical objects separated by
+        // several distinct object shapes
+        List<Object> array = new ArrayList<>();
+        array.add(Map.of("dup", 1));
+        for (int i = 0; i < 10; i++) {
+            array.add(Map.of("f" + i, i));
+        }
+        array.add(Map.of("dup", 1));
+
+        String json = MAPPER.writeValueAsString(array);
+
+        JsonType schema = inferSchema(json);
+
+        assertInstanceOf(ArrayType.class, schema);
+        ArrayType arrayType = (ArrayType) schema;
+        // 10 distinct "fN" shapes + 1 deduplicated "dup" shape
+        assertEquals(11, arrayType.getFields().size());
+        assertTrue(arrayType.getFields().contains(ObjectType.of("dup", IntNumberType.instance())));
+    }
+
+    @Test
+    void testNestedObjectWithArrayFieldUsesDottedPath() throws IOException {
+        // Given an object whose nested object contains an array field
+        Map<String, Object> stringObjectMap =
+                Map.of("a1", Map.of("a2", List.of(1, 2, 3)));
+
+        String json = MAPPER.writeValueAsString(stringObjectMap);
+
+        JsonType schema = inferSchema(json);
+
+        // The array field should get the same dotted-path prefix as sibling scalar fields
+        assertEquals(
+                ObjectType.of("a1.a2", ArrayType.of(IntNumberType.instance())),
+                schema
+        );
+    }
+
     private JsonType inferSchema(String json) throws IOException {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
             JsonSchemaAnalyzer jsonSchemaAnalyzer = new JsonSchemaAnalyzer();

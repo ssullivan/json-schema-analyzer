@@ -29,34 +29,33 @@ public class JsonSchemaAnalyzer {
     public JsonType parse(InputStream source) throws IOException {
         Objects.requireNonNull(source, "The method parameter `source` must not be null");
 
-        JsonParser jParser = JSON_FACTORY.createParser(source);
+        try (JsonParser jParser = JSON_FACTORY.createParser(source)) {
+            JsonPath path = new JsonPath();
+            JsonToken currentToken;
 
-        JsonPath path = new JsonPath();
-        JsonToken currentToken;
-
-        jParser.nextToken();
-        currentToken = jParser.getCurrentToken();
-        if (currentToken == JsonToken.START_OBJECT) {
-            ObjectType root = new ObjectType();
-            handleObjectStruct(jParser, path, root);
-            return root;
-        }
-        else if (currentToken == JsonToken.START_ARRAY) {
-            return handleObjectArray(jParser, path, null);
-        }
-        else {
-            throw new RuntimeException("Unsupported root");
+            jParser.nextToken();
+            currentToken = jParser.getCurrentToken();
+            if (currentToken == JsonToken.START_OBJECT) {
+                ObjectType root = new ObjectType();
+                handleObjectStruct(jParser, path, root);
+                return root;
+            } else if (currentToken == JsonToken.START_ARRAY) {
+                return handleObjectArray(jParser, path, null, null);
+            } else if (currentToken.isScalarValue()) {
+                return convertScalarToken(currentToken);
+            } else {
+                throw new RuntimeException("Unsupported root");
+            }
         }
     }
 
 
-    private static ArrayType handleObjectArray(JsonParser jParser, JsonPath jsonPath, JsonType schema) throws IOException {
+    private static ArrayType handleObjectArray(JsonParser jParser, JsonPath jsonPath, JsonType schema, String name) throws IOException {
         if (jsonPath.nonEmpty()) {
             jsonPath.push(".");
         }
 
         ArrayType arrayType = new ArrayType();
-        String name = jParser.getCurrentName();
         while (jParser.nextToken() != JsonToken.END_ARRAY) {
             JsonToken currentToken = jParser.getCurrentToken();
 
@@ -68,7 +67,7 @@ public class JsonSchemaAnalyzer {
                 handleObjectStruct(jParser, new JsonPath(), objectType);
                 arrayType.addField(objectType);
             } else if (currentToken == JsonToken.START_ARRAY) {
-                handleObjectArray(jParser, jsonPath, arrayType);
+                handleObjectArray(jParser, jsonPath, arrayType, null);
             }
         }
 
@@ -100,8 +99,9 @@ public class JsonSchemaAnalyzer {
                 jsonPath.pop();
             }
             else if (currentToken == JsonToken.START_ARRAY) {
+                String key = jsonPath + jParser.getCurrentName();
                 jsonPath.push(jParser.getCurrentName());
-                handleObjectArray(jParser, jsonPath, objectType);
+                handleObjectArray(jParser, jsonPath, objectType, key);
                 jsonPath.pop();
             }
             else if (currentToken.isScalarValue()) {

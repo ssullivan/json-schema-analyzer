@@ -1,18 +1,16 @@
 package com.github.ssullivan.types;
 
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 public final class ArrayType implements JsonType {
-    private final Set<JsonType> fields = new TreeSet<>();
+    private final Set<JsonType> fields = new LinkedHashSet<>();
 
     public void addField(JsonType type) {
-        if (this.fields.add(type)) {
-            int j = 0;
-        }
+        this.fields.add(type);
     }
 
     public Set<JsonType> getFields() {
@@ -52,13 +50,5 @@ public final class ArrayType implements JsonType {
     @Override
     public int hashCode() {
         return Objects.hash(fields);
-    }
-
-    @Override
-    public int compareTo(JsonType o) {
-        if (this == o) return 0;
-        if (o == null || getClass() != o.getClass()) return -1;
-        if (Objects.equals(fields, ((ArrayType) o).fields)) return 0;
-        return 1;
     }
 }

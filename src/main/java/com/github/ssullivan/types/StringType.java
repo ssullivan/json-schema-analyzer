@@ -1,14 +1,12 @@
 package com.github.ssullivan.types;
 
 public final class StringType implements JsonType {
-    @Override
-    public String toString() {
-        return "string";
+    private StringType() {
     }
 
     @Override
-    public int compareTo(JsonType o) {
-        return Integer.compare(ordinal(), o.ordinal());
+    public String toString() {
+        return "string";
     }
 
     @Override
@@ -37,8 +35,6 @@ public final class StringType implements JsonType {
 
     @Override
     public int hashCode() {
-        return super.hashCode();
+        return getClass().hashCode();
     }
-
-
 }

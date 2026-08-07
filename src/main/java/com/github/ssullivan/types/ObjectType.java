@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public final class ObjectType implements JsonType {
     private final Map<String, JsonType> fields = new TreeMap<>();
@@ -57,12 +56,8 @@ public final class ObjectType implements JsonType {
         return Objects.equals(fields, objectType.fields);
     }
 
-
     @Override
-    public int compareTo(JsonType o) {
-        if (this == o) return 0;
-        if (o == null || getClass() != o.getClass()) return -1;
-        if (Objects.equals(fields, ((ObjectType) o).fields)) return 0;
-        return 1;
+    public int hashCode() {
+        return Objects.hash(fields);
     }
 }

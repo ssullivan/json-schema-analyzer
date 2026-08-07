@@ -1,8 +1,9 @@
 package com.github.ssullivan.types;
 
-import java.util.Objects;
-
 public final class FloatNumberType implements JsonType {
+    private FloatNumberType() {
+    }
+
     @Override
     public String toString() {
         return "float";
@@ -32,9 +33,8 @@ public final class FloatNumberType implements JsonType {
         return o != null && getClass() == o.getClass();
     }
 
-
     @Override
-    public int compareTo(JsonType o) {
-        return Integer.compare(ordinal(), o.ordinal());
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

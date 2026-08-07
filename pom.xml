@@ -11,7 +11,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <start-class>org.github.ssullivan.Main</start-class>
+        <start-class>com.github.ssullivan.Main</start-class>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -20,7 +20,6 @@
         <junit.version>5.10.1</junit.version>
         <jackson.version>2.16.1</jackson.version>
         <picocli.version>4.7.5</picocli.version>
-        <guava.version>32.1.3-jre</guava.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -47,11 +46,6 @@
         </dependencies>
     </dependencyManagement>
     <dependencies>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>${guava.version}</version>
-        </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>

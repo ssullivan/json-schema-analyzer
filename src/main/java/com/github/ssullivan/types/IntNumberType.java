@@ -1,6 +1,9 @@
 package com.github.ssullivan.types;
 
 public final class IntNumberType implements JsonType {
+    private IntNumberType() {
+    }
+
     @Override
     public String toString() {
         return "integer";
@@ -30,9 +33,8 @@ public final class IntNumberType implements JsonType {
         return o != null && getClass() == o.getClass();
     }
 
-
     @Override
-    public int compareTo(JsonType o) {
-        return Integer.compare(ordinal(), o.ordinal());
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

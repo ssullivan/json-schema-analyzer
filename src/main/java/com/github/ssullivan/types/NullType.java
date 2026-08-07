@@ -1,6 +1,8 @@
 package com.github.ssullivan.types;
 
 public final class NullType implements JsonType {
+    private NullType() {
+    }
 
     @Override
     public String toString() {
@@ -32,7 +34,7 @@ public final class NullType implements JsonType {
     }
 
     @Override
-    public int compareTo(JsonType o) {
-        return Integer.compare(ordinal(), o.ordinal());
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }
