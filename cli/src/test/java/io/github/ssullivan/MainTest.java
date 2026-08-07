@@ -104,6 +104,31 @@ class MainTest {
     }
 
     @Test
+    void testLlmFlagParsesWithoutAffectingCallResult(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir, "{\"id\": 1}");
+
+        Main.JsonSchemaAnalyzeCommand command = new Main.JsonSchemaAnalyzeCommand();
+        CommandLine commandLine = new CommandLine(command);
+        int exitCode = commandLine.execute("-i", file.toString(), "-l");
+
+        assertEquals(0, exitCode);
+        assertTrue(command.llm);
+        // -l only changes how main() renders the result, not what call() computes
+        assertEquals(ObjectType.of("id", ScalarType.INTEGER), commandLine.getExecutionResult());
+    }
+
+    @Test
+    void testJsonSchemaAndLlmFlagsTogetherFailFast(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir, "{\"id\": 1}");
+
+        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+        int exitCode = commandLine.execute("-i", file.toString(), "-s", "-l");
+
+        assertNotEquals(0, exitCode);
+        assertNull(commandLine.getExecutionResult());
+    }
+
+    @Test
     void testMissingFileReturnsNonZeroExitAndNoResult(@TempDir Path tempDir) {
         Path missing = tempDir.resolve("does-not-exist.json");
 

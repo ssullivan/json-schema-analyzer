@@ -1,13 +1,16 @@
 json-schema-explorer
 ---
 
-A small command line utility to understand the fields, and datatypes in a JSON document.
+A small command line utility to understand the fields, and datatypes in a JSON document. Beyond
+plain output and JSON Schema, it can also emit a punctuation-free notation built to be pasted
+into an LLM prompt cheaply — see [Example6](#example6-llm-optimized-output).
 
 ## Contents
 * [Requirements](#requirements)
 * [Build](#build)
 * [CLI](#cli)
 * [Examples](#examples)
+  * [Example6: LLM-Optimized Output](#example6-llm-optimized-output)
 * [Error Handling](#error-handling)
 * [Using as a Library](#using-as-a-library)
 * [Versioning](#versioning)
@@ -33,9 +36,12 @@ builds both modules and produces the executable CLI JAR at
 
 ## CLI 
 ```shell
-Usage: json-analyze [-ms] [-i=<file>]
+Usage: json-analyze [-lms] [-i=<file>]
   -i, --input-file=<file>   The JSON file to analyze; reads from stdin if
                               omitted
+  -l, --llm                 Print the shape in a compact, punctuation-free
+                              notation designed to be pasted into an LLM prompt
+                              cheaply, instead of the default compact notation
   -m, --merge-samples       Treat each element of a top-level JSON array as one
                               sample and merge them into a single shape
   -s, --json-schema         Print the shape as a JSON Schema (draft-07)
@@ -243,6 +249,32 @@ would produce the following output
   },
   "required" : [ "product", "version" ]
 }
+```
+
+### Example6: LLM-Optimized Output
+
+Pass `-l`/`--llm` to print the shape in a compact notation with no braces, quotes, or commas —
+nesting is indentation only, array-typed fields get a trailing `[]`, and optional/union fields
+keep the same `?`/`|` markers as the default compact notation. It composes with `-m` the same way
+`-s` does. This isn't meant to be parsed back; it's meant to describe a JSON shape to an LLM
+(e.g. in a system prompt) using as few tokens as possible — on the merged-samples example above,
+`-l` output is roughly a third the size of the default compact notation and a sixth the size of
+`-s`'s JSON Schema.
+
+```shell
+java -jar json-schema-explorer-<version>.jar -i example.json -l
+```
+
+would produce the following output
+
+```
+product:
+  enabled: boolean
+  name: string
+  sizes[]:
+    size: integer
+  weight: float
+version: integer
 ```
 
 ## Error Handling

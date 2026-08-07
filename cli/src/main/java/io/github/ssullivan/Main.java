@@ -2,6 +2,7 @@ package io.github.ssullivan;
 
 import io.github.ssullivan.analyze.JsonSchemaAnalyzer;
 import io.github.ssullivan.analyze.SchemaMerger;
+import io.github.ssullivan.format.LlmWriter;
 import io.github.ssullivan.jackson.Json;
 import io.github.ssullivan.jackson.JsonSchemaWriter;
 import io.github.ssullivan.types.*;
@@ -27,8 +28,16 @@ public class Main {
                 description = "Print the shape as a JSON Schema (draft-07) document instead of the default compact notation")
         boolean jsonSchema;
 
+        @CommandLine.Option(names = {"-l", "--llm"},
+                description = "Print the shape in a compact, punctuation-free notation designed to be pasted into an LLM prompt cheaply, instead of the default compact notation")
+        boolean llm;
+
         @Override
         public JsonType call() throws Exception {
+            if (jsonSchema && llm) {
+                throw new IllegalArgumentException("--json-schema and --llm cannot be used together");
+            }
+
             try (InputStream inputStream = file != null ? new FileInputStream(file) : System.in) {
                 JsonSchemaAnalyzer analyzer = new JsonSchemaAnalyzer();
                 JsonType result = analyzer.parse(inputStream);
@@ -55,8 +64,12 @@ public class Main {
 
         if (exitCode == 0) {
             JsonType result = commandLine.getExecutionResult();
-            Object output = command.jsonSchema ? JsonSchemaWriter.toJsonSchema(result) : result;
-            System.out.println(Json.MAPPER.writeValueAsString(output));
+            if (command.llm) {
+                System.out.println(LlmWriter.write(result));
+            } else {
+                Object output = command.jsonSchema ? JsonSchemaWriter.toJsonSchema(result) : result;
+                System.out.println(Json.MAPPER.writeValueAsString(output));
+            }
         }
 
         System.exit(exitCode);
