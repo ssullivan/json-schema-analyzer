@@ -1,5 +1,6 @@
 package io.github.ssullivan.types;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -22,8 +23,11 @@ public final class ObjectType implements JsonType {
         this.fields.put(name, type);
     }
 
+    /**
+     * @return an unmodifiable view of the fields, in sorted-by-name order
+     */
     public Map<String, JsonType> getFields() {
-        return fields;
+        return Collections.unmodifiableMap(fields);
     }
 
     public void markOptional(String name) {
@@ -34,8 +38,11 @@ public final class ObjectType implements JsonType {
         return this.optionalFields.contains(name);
     }
 
+    /**
+     * @return an unmodifiable view of the optional field names
+     */
     public Set<String> getOptionalFields() {
-        return optionalFields;
+        return Collections.unmodifiableSet(optionalFields);
     }
 
     @Override

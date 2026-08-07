@@ -1,5 +1,6 @@
 package io.github.ssullivan.types;
 
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -16,8 +17,11 @@ public final class UnionType implements JsonType {
         this.members = new LinkedHashSet<>(members);
     }
 
+    /**
+     * @return an unmodifiable view of the union's member shapes
+     */
     public Set<JsonType> getMembers() {
-        return members;
+        return Collections.unmodifiableSet(members);
     }
 
     @Override

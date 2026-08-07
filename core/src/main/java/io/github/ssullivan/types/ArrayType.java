@@ -1,6 +1,7 @@
 package io.github.ssullivan.types;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -19,8 +20,11 @@ public final class ArrayType implements JsonType {
         this.fields.add(type);
     }
 
+    /**
+     * @return an unmodifiable view of the distinct element shapes, in first-appearance order
+     */
     public Set<JsonType> getFields() {
-        return fields;
+        return Collections.unmodifiableSet(fields);
     }
 
     public static ArrayType of(JsonType... jsonTypes) {
