@@ -38,7 +38,7 @@ public class JsonSchemaAnalyzer {
                 return root;
             } else if (currentToken == JsonToken.START_ARRAY) {
                 return handleObjectArray(jParser);
-            } else if (currentToken.isScalarValue()) {
+            } else if (currentToken != null && currentToken.isScalarValue()) {
                 return convertScalarToken(currentToken);
             } else {
                 throw new RuntimeException("Unsupported root");

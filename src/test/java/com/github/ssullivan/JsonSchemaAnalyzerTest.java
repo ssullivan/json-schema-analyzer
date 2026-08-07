@@ -234,6 +234,22 @@ class JsonSchemaAnalyzerTest {
         );
     }
 
+    @Test
+    void testScalarRoot() throws IOException {
+        // A bare scalar value is a valid, if unusual, JSON document
+        JsonType schema = inferSchema("\"hello\"");
+
+        assertEquals(ScalarType.STRING, schema);
+    }
+
+    @Test
+    void testEmptyInputThrowsUnsupportedRoot() {
+        // Empty input has no first token to inspect; this must fail cleanly rather than NPE
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> inferSchema(""));
+
+        assertEquals("Unsupported root", exception.getMessage());
+    }
+
     private JsonType inferSchema(String json) throws IOException {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
             JsonSchemaAnalyzer jsonSchemaAnalyzer = new JsonSchemaAnalyzer();
