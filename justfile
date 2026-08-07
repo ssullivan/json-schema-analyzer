@@ -32,18 +32,18 @@ release version next notes_file='':
     #!/usr/bin/env bash
     set -euo pipefail
 
-    dirty_check=(git status --porcelain)
+    exclude_notes=()
     if [ -n "{{notes_file}}" ]; then
-        dirty_check+=(-- ":(exclude){{notes_file}}")
+        exclude_notes=(-- ":(exclude){{notes_file}}")
     fi
-    if [ -n "$("${dirty_check[@]}")" ]; then
+    if [ -n "$(git status --porcelain "${exclude_notes[@]}")" ]; then
         echo "Working tree is not clean — commit or stash first" >&2
         exit 1
     fi
 
     mvn versions:set -DnewVersion={{version}} -DgenerateBackupPoms=false -q
     mvn clean install
-    git add -A
+    git add -A "${exclude_notes[@]}"
     git commit -m "Release {{version}}"
     if [ -n "{{notes_file}}" ]; then
         git tag -a v{{version}} -F "{{notes_file}}"
@@ -53,7 +53,7 @@ release version next notes_file='':
 
     mvn versions:set -DnewVersion={{next}} -DgenerateBackupPoms=false -q
     mvn -q clean install -DskipTests
-    git add -A
+    git add -A "${exclude_notes[@]}"
     git commit -m "Bump version to {{next}} for continued development"
 
     git push origin main
