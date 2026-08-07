@@ -24,8 +24,8 @@ run *args:
 clean:
     mvn clean
 
-# Cut a release: bump to `version`, tag, publish a GitHub release, then bump main to `next`
-# e.g. `just release 1.0.1 1.0.2-SNAPSHOT`
+# Cut a release: bump to `version`, tag, and push — .github/workflows/release.yml then
+# builds the jar and publishes the GitHub release. e.g. `just release 1.0.1 1.0.2-SNAPSHOT`
 release version next:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -41,9 +41,6 @@ release version next:
     git commit -m "Release {{version}}"
     git tag -a v{{version}} -m "v{{version}}"
 
-    jar_name="json-schema-explorer-{{version}}.jar"
-    cp "cli/target/$jar_name" "/tmp/$jar_name"
-
     mvn versions:set -DnewVersion={{next}} -DgenerateBackupPoms=false -q
     mvn -q clean install -DskipTests
     git add -A
@@ -51,7 +48,4 @@ release version next:
 
     git push origin main
     git push origin v{{version}}
-    gh release create v{{version}} "/tmp/$jar_name" --title v{{version}} --generate-notes
-
-    rm "/tmp/$jar_name"
-    echo "Released v{{version}}, main is now at {{next}}"
+    echo "Pushed v{{version}} — release.yml will build and publish it: https://github.com/ssullivan/json-schema-analyzer/actions"

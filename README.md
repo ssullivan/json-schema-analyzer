@@ -10,6 +10,7 @@ A small command line utility to understand the fields, and datatypes in a JSON d
 * [Examples](#examples)
 * [Error Handling](#error-handling)
 * [Using as a Library](#using-as-a-library)
+* [Releasing](#releasing)
 
 ## Requirements
 * JDK >= 17
@@ -265,9 +266,9 @@ document's shape in-process, without shelling out to the CLI:
 
 ```xml
 <dependency>
-    <groupId>com.github.ssullivan</groupId>
+    <groupId>io.github.ssullivan</groupId>
     <artifactId>json-schema-explorer-core</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
@@ -289,3 +290,17 @@ be read (a genuine I/O error), and an unchecked `JsonSchemaAnalysisException` if
 fine but its content isn't valid or supported JSON — malformed syntax, an empty document, and so
 on. The latter's message already includes the line and column where the problem was found, so it
 can be surfaced to a caller as-is without extra formatting.
+
+## Releasing
+
+Cutting a release is split between a local step and CI. From a clean working tree:
+
+```shell
+just release 1.0.1 1.0.2-SNAPSHOT
+```
+
+This bumps the POMs to `1.0.1`, builds and tests locally as a sanity check, commits, tags
+`v1.0.1`, bumps `main` to `1.0.2-SNAPSHOT` for continued development, and pushes both. Pushing
+the `v1.0.1` tag triggers [`.github/workflows/release.yml`](.github/workflows/release.yml), which
+builds the CLI jar from that tag in a clean CI environment and publishes it as a GitHub release —
+CI, not a local machine, produces the artifact people actually download.
