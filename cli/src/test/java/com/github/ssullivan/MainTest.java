@@ -7,7 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -112,11 +115,18 @@ class MainTest {
     }
 
     @Test
-    void testMissingRequiredInputOptionFailsFastWithNonZeroExit() {
-        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
-        int exitCode = commandLine.execute();
+    void testReadsFromStdinWhenInputFileOmitted() {
+        InputStream originalStdin = System.in;
+        System.setIn(new ByteArrayInputStream("{\"id\": 1}".getBytes(StandardCharsets.UTF_8)));
+        try {
+            CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+            int exitCode = commandLine.execute();
 
-        assertNotEquals(0, exitCode);
+            assertEquals(0, exitCode);
+            assertEquals(ObjectType.of("id", ScalarType.INTEGER), commandLine.getExecutionResult());
+        } finally {
+            System.setIn(originalStdin);
+        }
     }
 
     @Test

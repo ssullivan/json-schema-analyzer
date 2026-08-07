@@ -31,12 +31,19 @@ builds both modules and produces the executable CLI JAR at
 
 ## CLI 
 ```shell
-Usage: json-analyze [-ms] -i=<file>
-  -i, --input-file=<file>   The JSON file to analyze
+Usage: json-analyze [-ms] [-i=<file>]
+  -i, --input-file=<file>   The JSON file to analyze; reads from stdin if
+                              omitted
   -m, --merge-samples       Treat each element of a top-level JSON array as one
                               sample and merge them into a single shape
   -s, --json-schema         Print the shape as a JSON Schema (draft-07)
                               document instead of the default compact notation
+```
+
+`-i` is optional — omit it to pipe JSON in from stdin instead:
+
+```shell
+curl -s https://api.example.com/users | java -jar json-schema-explorer-<version>.jar
 ```
 
 ## Examples

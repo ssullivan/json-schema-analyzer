@@ -10,12 +10,13 @@ import picocli.CommandLine;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.Callable;
 
 public class Main {
     @CommandLine.Command(name = "json-analyze")
     static class JsonSchemaAnalyzeCommand implements Callable<JsonType> {
-        @CommandLine.Option(names = {"-i", "--input-file"}, description = "The JSON file to analyze", required = true)
+        @CommandLine.Option(names = {"-i", "--input-file"}, description = "The JSON file to analyze; reads from stdin if omitted")
         private File file;
 
         @CommandLine.Option(names = {"-m", "--merge-samples"},
@@ -28,9 +29,9 @@ public class Main {
 
         @Override
         public JsonType call() throws Exception {
-            try (FileInputStream fileInputStream = new FileInputStream(file)) {
+            try (InputStream inputStream = file != null ? new FileInputStream(file) : System.in) {
                 JsonSchemaAnalyzer analyzer = new JsonSchemaAnalyzer();
-                JsonType result = analyzer.parse(fileInputStream);
+                JsonType result = analyzer.parse(inputStream);
 
                 if (mergeSamples && result instanceof ArrayType arrayType) {
                     return arrayType.getFields().stream()
