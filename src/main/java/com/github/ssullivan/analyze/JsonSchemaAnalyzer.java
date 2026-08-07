@@ -30,17 +30,14 @@ public class JsonSchemaAnalyzer {
         Objects.requireNonNull(source, "The method parameter `source` must not be null");
 
         try (JsonParser jParser = JSON_FACTORY.createParser(source)) {
-            JsonPath path = new JsonPath();
-            JsonToken currentToken;
-
             jParser.nextToken();
-            currentToken = jParser.getCurrentToken();
+            JsonToken currentToken = jParser.getCurrentToken();
             if (currentToken == JsonToken.START_OBJECT) {
                 ObjectType root = new ObjectType();
-                handleObjectStruct(jParser, path, root);
+                handleObjectStruct(jParser, root);
                 return root;
             } else if (currentToken == JsonToken.START_ARRAY) {
-                return handleObjectArray(jParser, path, null, null);
+                return handleObjectArray(jParser);
             } else if (currentToken.isScalarValue()) {
                 return convertScalarToken(currentToken);
             } else {
@@ -49,12 +46,25 @@ public class JsonSchemaAnalyzer {
         }
     }
 
-
-    private static ArrayType handleObjectArray(JsonParser jParser, JsonPath jsonPath, JsonType schema, String name) throws IOException {
-        if (jsonPath.nonEmpty()) {
-            jsonPath.push(".");
+    private static void handleObjectStruct(JsonParser jParser, ObjectType objectType) throws IOException {
+        while (jParser.nextToken() != JsonToken.END_OBJECT) {
+            JsonToken currentToken = jParser.getCurrentToken();
+            String name = jParser.getCurrentName();
+            if (currentToken == JsonToken.START_OBJECT) {
+                ObjectType nested = new ObjectType();
+                handleObjectStruct(jParser, nested);
+                objectType.addField(name, nested);
+            }
+            else if (currentToken == JsonToken.START_ARRAY) {
+                objectType.addField(name, handleObjectArray(jParser));
+            }
+            else if (currentToken.isScalarValue()) {
+                objectType.addField(name, convertScalarToken(currentToken));
+            }
         }
+    }
 
+    private static ArrayType handleObjectArray(JsonParser jParser) throws IOException {
         ArrayType arrayType = new ArrayType();
         while (jParser.nextToken() != JsonToken.END_ARRAY) {
             JsonToken currentToken = jParser.getCurrentToken();
@@ -64,55 +74,14 @@ public class JsonSchemaAnalyzer {
             }
             else if (currentToken == JsonToken.START_OBJECT) {
                 ObjectType objectType = new ObjectType();
-                handleObjectStruct(jParser, new JsonPath(), objectType);
+                handleObjectStruct(jParser, objectType);
                 arrayType.addField(objectType);
             } else if (currentToken == JsonToken.START_ARRAY) {
-                handleObjectArray(jParser, jsonPath, arrayType, null);
+                arrayType.addField(handleObjectArray(jParser));
             }
-        }
-
-        if (schema != null) {
-            if (schema instanceof ArrayType) {
-                ((ArrayType) schema).addField(arrayType);
-            } else if (schema instanceof ObjectType) {
-                ((ObjectType) schema).addField(name, arrayType);
-            }
-        }
-
-
-        if (jsonPath.nonEmpty()) {
-            jsonPath.pop();
         }
 
         return arrayType;
-    }
-
-    private static void handleObjectStruct(JsonParser jParser, JsonPath jsonPath, ObjectType objectType) throws IOException {
-        if (jsonPath.nonEmpty()) {
-            jsonPath.push(".");
-        }
-        while (jParser.nextToken() != JsonToken.END_OBJECT) {
-            JsonToken currentToken = jParser.getCurrentToken();
-            if (currentToken == JsonToken.START_OBJECT) {
-                jsonPath.push(jParser.getCurrentName());
-                handleObjectStruct(jParser, jsonPath, objectType);
-                jsonPath.pop();
-            }
-            else if (currentToken == JsonToken.START_ARRAY) {
-                String key = jsonPath + jParser.getCurrentName();
-                jsonPath.push(jParser.getCurrentName());
-                handleObjectArray(jParser, jsonPath, objectType, key);
-                jsonPath.pop();
-            }
-            else if (currentToken.isScalarValue()) {
-                String key = jsonPath + jParser.getCurrentName();
-                objectType.addField(key, convertScalarToken(currentToken));
-            }
-        }
-
-        if (jsonPath.nonEmpty()) {
-            jsonPath.pop();
-        }
     }
 
     /**

@@ -76,6 +76,27 @@ class SchemaMergerTest {
     }
 
     @Test
+    void testNestedObjectFieldsMergeRecursively() {
+        ObjectType a = ObjectType.of("product", ObjectType.of("name", StringType.instance()));
+
+        ObjectType productB = new ObjectType();
+        productB.addField("name", StringType.instance());
+        productB.addField("weight", FloatNumberType.instance());
+        ObjectType b = ObjectType.of("product", productB);
+
+        JsonType merged = SchemaMerger.merge(a, b);
+
+        assertInstanceOf(ObjectType.class, merged);
+        JsonType productType = ((ObjectType) merged).getFields().get("product");
+        assertInstanceOf(ObjectType.class, productType);
+
+        ObjectType mergedProduct = (ObjectType) productType;
+        assertFalse(mergedProduct.isOptional("name"));
+        assertTrue(mergedProduct.isOptional("weight"));
+        assertEquals(FloatNumberType.instance(), mergedProduct.getFields().get("weight"));
+    }
+
+    @Test
     void testOptionalityCarriesForwardAcrossMultipleMerges() {
         ObjectType record1 = new ObjectType();
         record1.addField("id", IntNumberType.instance());

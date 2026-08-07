@@ -48,12 +48,14 @@ would produce the following output
 
 ```json
 {
-  "product.enabled" : "boolean",
-  "product.name" : "string",
-  "product.sizes" : [ {
-    "size" : "integer"
-  } ],
-  "product.weight" : "float",
+  "product" : {
+    "enabled" : "boolean",
+    "name" : "string",
+    "sizes" : [ {
+      "size" : "integer"
+    } ],
+    "weight" : "float"
+  },
   "version" : "integer"
 }
 ```
@@ -81,12 +83,14 @@ would produce the following output
 
 ```json
 [ {
-  "product.enabled" : "boolean",
-  "product.name" : "string",
-  "product.sizes" : [ {
-    "size" : "integer"
-  } ],
-  "product.weight" : "float",
+  "product" : {
+    "enabled" : "boolean",
+    "name" : "string",
+    "sizes" : [ {
+      "size" : "integer"
+    } ],
+    "weight" : "float"
+  },
   "version" : "integer"
 } ]
 ```
@@ -138,5 +142,27 @@ would produce the following output
   "email?" : "null|string",
   "id" : "integer|string",
   "name" : "string"
+}
+```
+
+Merging recurses into nested objects too — a field only present in some samples' nested objects
+is marked optional *within* that nested object, not just at the top level:
+
+```shell
+cat <<EOF >nested-samples.json
+[
+  {"product": {"name": "A"}},
+  {"product": {"name": "B", "weight": 1.5}}
+]
+EOF
+java -jar json-schema-explorer-<version>.jar -i nested-samples.json -m
+```
+
+```json
+{
+  "product" : {
+    "name" : "string",
+    "weight?" : "float"
+  }
 }
 ```

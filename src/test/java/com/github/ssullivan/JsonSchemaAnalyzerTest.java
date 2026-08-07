@@ -90,7 +90,15 @@ class JsonSchemaAnalyzerTest {
         JsonType schema = inferSchema(json);
 
         assertInstanceOf(ObjectType.class, schema);
-        assertEquals(ObjectType.of("a1.a2.a3.a4.a5.a6", IntNumberType.instance()), schema);
+        assertEquals(
+                ObjectType.of("a1",
+                        ObjectType.of("a2",
+                                ObjectType.of("a3",
+                                        ObjectType.of("a4",
+                                                ObjectType.of("a5",
+                                                        ObjectType.of("a6", IntNumberType.instance())))))),
+                schema
+        );
     }
 
     @Test
@@ -166,7 +174,7 @@ class JsonSchemaAnalyzerTest {
     }
 
     @Test
-    void testNestedObjectWithArrayFieldUsesDottedPath() throws IOException {
+    void testNestedObjectWithArrayFieldNests() throws IOException {
         // Given an object whose nested object contains an array field
         Map<String, Object> stringObjectMap =
                 Map.of("a1", Map.of("a2", List.of(1, 2, 3)));
@@ -175,9 +183,9 @@ class JsonSchemaAnalyzerTest {
 
         JsonType schema = inferSchema(json);
 
-        // The array field should get the same dotted-path prefix as sibling scalar fields
+        // The array field should nest under its enclosing object, not flatten to a dotted key
         assertEquals(
-                ObjectType.of("a1.a2", ArrayType.of(IntNumberType.instance())),
+                ObjectType.of("a1", ObjectType.of("a2", ArrayType.of(IntNumberType.instance()))),
                 schema
         );
     }
