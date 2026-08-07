@@ -12,7 +12,7 @@ A small command line utility to understand the fields, and datatypes in a JSON d
 This is a two-module Maven project:
 * `core` — the schema-inference library (`json-schema-explorer-core`), no CLI dependencies.
 * `cli` — the command line tool (`json-schema-explorer`), depends on `core` and packages an
-  executable fat JAR via the spring-boot-maven-plugin.
+  executable fat JAR via the maven-shade-plugin.
 
 ```shell
 mvn clean install
