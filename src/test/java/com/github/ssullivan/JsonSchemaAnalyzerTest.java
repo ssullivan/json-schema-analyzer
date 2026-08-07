@@ -2,6 +2,7 @@ package com.github.ssullivan;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.ssullivan.analyze.JsonSchemaAnalyzer;
+import com.github.ssullivan.analyze.SchemaMerger;
 import com.github.ssullivan.types.*;
 import org.junit.jupiter.api.Test;
 
@@ -178,6 +179,50 @@ class JsonSchemaAnalyzerTest {
         assertEquals(
                 ObjectType.of("a1.a2", ArrayType.of(IntNumberType.instance())),
                 schema
+        );
+    }
+
+    @Test
+    void testMergingSamplesEndToEnd() throws IOException {
+        // Given four realistic user-record samples with varying shape:
+        // one missing "email", one with a null "email", one with "id" as a string
+        Map<String, Object> record3 = new LinkedHashMap<>();
+        record3.put("id", 3);
+        record3.put("name", "Carol");
+        record3.put("email", null);
+
+        List<Object> samples = List.of(
+                Map.of("id", 1, "name", "Alice", "email", "a@example.com"),
+                Map.of("id", 2, "name", "Bob"),
+                record3,
+                Map.of("id", "4", "name", "Dave", "email", "d@example.com")
+        );
+
+        String json = MAPPER.writeValueAsString(samples);
+        JsonType schema = inferSchema(json);
+
+        assertInstanceOf(ArrayType.class, schema);
+        JsonType merged = ((ArrayType) schema).getFields().stream()
+                .reduce(SchemaMerger::merge)
+                .orElseThrow();
+
+        assertInstanceOf(ObjectType.class, merged);
+        ObjectType objectType = (ObjectType) merged;
+
+        assertFalse(objectType.isOptional("id"));
+        assertFalse(objectType.isOptional("name"));
+        assertTrue(objectType.isOptional("email"));
+
+        assertEquals(StringType.instance(), objectType.getFields().get("name"));
+        assertInstanceOf(UnionType.class, objectType.getFields().get("id"));
+        assertEquals(
+                Set.of(IntNumberType.instance(), StringType.instance()),
+                ((UnionType) objectType.getFields().get("id")).getMembers()
+        );
+        assertInstanceOf(UnionType.class, objectType.getFields().get("email"));
+        assertEquals(
+                Set.of(StringType.instance(), NullType.instance()),
+                ((UnionType) objectType.getFields().get("email")).getMembers()
         );
     }
 

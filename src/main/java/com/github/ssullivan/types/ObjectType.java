@@ -2,11 +2,14 @@ package com.github.ssullivan.types;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 public final class ObjectType implements JsonType {
     private final Map<String, JsonType> fields = new TreeMap<>();
+    private final Set<String> optionalFields = new TreeSet<>();
 
     public void addField(String name, JsonType type) {
         this.fields.put(name, type);
@@ -14,6 +17,18 @@ public final class ObjectType implements JsonType {
 
     public Map<String, JsonType> getFields() {
         return fields;
+    }
+
+    public void markOptional(String name) {
+        this.optionalFields.add(name);
+    }
+
+    public boolean isOptional(String name) {
+        return this.optionalFields.contains(name);
+    }
+
+    public Set<String> getOptionalFields() {
+        return optionalFields;
     }
 
     @Override
@@ -53,11 +68,12 @@ public final class ObjectType implements JsonType {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ObjectType objectType = (ObjectType) o;
-        return Objects.equals(fields, objectType.fields);
+        return Objects.equals(fields, objectType.fields)
+                && Objects.equals(optionalFields, objectType.optionalFields);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(fields);
+        return Objects.hash(fields, optionalFields);
     }
 }

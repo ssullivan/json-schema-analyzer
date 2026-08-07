@@ -18,8 +18,10 @@ mvn clean install
 
 ## CLI 
 ```shell
-Usage: json-analyze -i=<file>
+Usage: json-analyze [-m] -i=<file>
   -i, --input-file=<file>   The JSON file to analyze
+  -m, --merge-samples       Treat each element of a top-level JSON array as one
+                             sample and merge them into a single shape
 ```
 
 ## Examples
@@ -48,10 +50,10 @@ would produce the following output
 {
   "product.enabled" : "boolean",
   "product.name" : "string",
-  "product.weight" : "float",
-  "sizes" : [ {
+  "product.sizes" : [ {
     "size" : "integer"
   } ],
+  "product.weight" : "float",
   "version" : "integer"
 }
 ```
@@ -81,10 +83,10 @@ would produce the following output
 [ {
   "product.enabled" : "boolean",
   "product.name" : "string",
-  "product.weight" : "float",
-  "sizes" : [ {
+  "product.sizes" : [ {
     "size" : "integer"
   } ],
+  "product.weight" : "float",
   "version" : "integer"
 } ]
 ```
@@ -107,4 +109,34 @@ would produce the following output
 
 ```json
 [ [ "integer" ], [ "float" ], [ "boolean" ], [ "string" ], [ ] ]
+```
+
+### Example4: Merging Samples
+
+By default, a top-level JSON array is treated as one document and each element's shape is
+reported independently. When your array is really a collection of *sample records* — e.g. rows
+exported from an API or a database — pass `-m`/`--merge-samples` to fold them into a single
+combined shape instead: fields missing from some samples are marked optional (`?` suffix), and
+fields whose type varies across samples become a `|`-separated union.
+
+```shell
+cat <<EOF >samples.json
+[
+  {"id": 1, "name": "Alice", "email": "a@example.com"},
+  {"id": 2, "name": "Bob"},
+  {"id": 3, "name": "Carol", "email": null},
+  {"id": "4", "name": "Dave", "email": "d@example.com"}
+]
+EOF
+java -jar json-schema-explorer-<version>.jar -i samples.json -m
+```
+
+would produce the following output
+
+```json
+{
+  "email?" : "null|string",
+  "id" : "integer|string",
+  "name" : "string"
+}
 ```
