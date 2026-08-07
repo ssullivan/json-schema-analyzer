@@ -1,5 +1,7 @@
 package com.github.ssullivan;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.github.ssullivan.jackson.JsonSchemaWriter;
 import com.github.ssullivan.types.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -61,6 +63,41 @@ class MainTest {
 
         assertEquals(0, exitCode);
         assertEquals(ObjectType.of("id", ScalarType.INTEGER), commandLine.getExecutionResult());
+    }
+
+    @Test
+    void testJsonSchemaFlagParsesWithoutAffectingCallResult(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir, "{\"id\": 1}");
+
+        Main.JsonSchemaAnalyzeCommand command = new Main.JsonSchemaAnalyzeCommand();
+        CommandLine commandLine = new CommandLine(command);
+        int exitCode = commandLine.execute("-i", file.toString(), "-s");
+
+        assertEquals(0, exitCode);
+        assertTrue(command.jsonSchema);
+        // -s only changes how main() renders the result, not what call() computes
+        assertEquals(ObjectType.of("id", ScalarType.INTEGER), commandLine.getExecutionResult());
+    }
+
+    @Test
+    void testJsonSchemaFlagComposesWithMergeFlag(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir, "[{\"id\": 1, \"name\": \"Alice\"}, {\"id\": 2}]");
+
+        Main.JsonSchemaAnalyzeCommand command = new Main.JsonSchemaAnalyzeCommand();
+        CommandLine commandLine = new CommandLine(command);
+        int exitCode = commandLine.execute("-i", file.toString(), "-s", "-m");
+
+        assertEquals(0, exitCode);
+        assertTrue(command.jsonSchema);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        assertTrue(((ObjectType) result).isOptional("name"));
+
+        // Reproduces exactly what Main.main() does with the call() result when -s is set
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(result);
+        assertEquals("object", schema.get("type").asText());
+        assertEquals(1, schema.get("required").size());
+        assertEquals("id", schema.get("required").get(0).asText());
     }
 
     @Test

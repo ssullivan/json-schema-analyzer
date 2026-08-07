@@ -23,10 +23,12 @@ builds both modules and produces the executable CLI JAR at
 
 ## CLI 
 ```shell
-Usage: json-analyze [-m] -i=<file>
+Usage: json-analyze [-ms] -i=<file>
   -i, --input-file=<file>   The JSON file to analyze
   -m, --merge-samples       Treat each element of a top-level JSON array as one
-                             sample and merge them into a single shape
+                              sample and merge them into a single shape
+  -s, --json-schema         Print the shape as a JSON Schema (draft-07)
+                              document instead of the default compact notation
 ```
 
 ## Examples
@@ -170,6 +172,59 @@ java -jar json-schema-explorer-<version>.jar -i nested-samples.json -m
     "name" : "string",
     "weight?" : "float"
   }
+}
+```
+
+### Example5: JSON Schema Output
+
+Pass `-s`/`--json-schema` to print the shape as a real [JSON Schema draft-07](https://json-schema.org/specification-links.html#draft-7)
+document instead of the default compact notation — composes with `-m` the same way. Note that
+JSON Schema has no separate "float" keyword, so both the `float` and merged `number` types from
+the compact notation collapse to `"number"` here.
+
+```shell
+java -jar json-schema-explorer-<version>.jar -i example.json -s
+```
+
+would produce the following output
+
+```json
+{
+  "$schema" : "http://json-schema.org/draft-07/schema#",
+  "type" : "object",
+  "properties" : {
+    "product" : {
+      "type" : "object",
+      "properties" : {
+        "enabled" : {
+          "type" : "boolean"
+        },
+        "name" : {
+          "type" : "string"
+        },
+        "sizes" : {
+          "type" : "array",
+          "items" : {
+            "type" : "object",
+            "properties" : {
+              "size" : {
+                "type" : "integer"
+              }
+            },
+            "required" : [ "size" ]
+          }
+        },
+        "weight" : {
+          "type" : "number"
+        }
+      },
+      "required" : [ "enabled", "name", "sizes", "weight" ]
+    },
+    "version" : {
+      "type" : "integer"
+    }
+  },
+  "required" : [ "product", "version" ]
 }
 ```
 
