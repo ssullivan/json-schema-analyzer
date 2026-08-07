@@ -9,12 +9,17 @@ A small command line utility to understand the fields, and datatypes in a JSON d
 
 ## Build
 
-This project creates an executable fat JAR file using the spring-boot-maven-plugin. The JAR will 
-contain the dependencies necessary for execution.
+This is a two-module Maven project:
+* `core` — the schema-inference library (`json-schema-explorer-core`), no CLI dependencies.
+* `cli` — the command line tool (`json-schema-explorer`), depends on `core` and packages an
+  executable fat JAR via the spring-boot-maven-plugin.
 
 ```shell
 mvn clean install
 ```
+
+builds both modules and produces the executable CLI JAR at
+`cli/target/json-schema-explorer-<version>.jar`.
 
 ## CLI 
 ```shell
@@ -167,3 +172,29 @@ java -jar json-schema-explorer-<version>.jar -i nested-samples.json -m
   }
 }
 ```
+
+## Using as a Library
+
+`json-schema-explorer-core` has no CLI dependencies — depend on it directly to infer a JSON
+document's shape in-process, without shelling out to the CLI:
+
+```xml
+<dependency>
+    <groupId>com.github.ssullivan</groupId>
+    <artifactId>json-schema-explorer-core</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+```java
+JsonSchemaAnalyzer analyzer = new JsonSchemaAnalyzer();
+JsonType schema = analyzer.parse(inputStream);
+
+if (schema instanceof ObjectType objectType) {
+    objectType.getFields().forEach((name, type) -> System.out.println(name + ": " + type));
+}
+```
+
+`JsonType` is a sealed interface (`ObjectType`, `ArrayType`, `ScalarType`, `UnionType`), so callers
+can pattern-match on it directly. `SchemaMerger.merge(a, b)` is available the same way for folding
+multiple samples into one shape, exactly as the CLI's `-m` flag does internally.
