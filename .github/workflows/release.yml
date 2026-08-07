@@ -28,9 +28,12 @@ jobs:
           jar=$(ls cli/target/json-schema-explorer-*.jar | grep -v -e sources -e javadoc -e original)
           echo "path=$jar" >> "$GITHUB_OUTPUT"
       - name: Create GitHub release
+        # --notes-from-tag uses the annotated tag's own message as the release body, so the
+        # notes written when the tag was created (see justfile's `release` recipe) carry through
+        # instead of a generic auto-generated changelog.
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ github.ref_name }}" "${{ steps.jar.outputs.path }}" \
             --title "${{ github.ref_name }}" \
-            --generate-notes
+            --notes-from-tag

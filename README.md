@@ -315,8 +315,11 @@ Cutting a release is split between a local step and CI. From a clean working tre
 just release 1.0.1 1.0.2-SNAPSHOT
 ```
 
-This bumps the POMs to `1.0.1`, builds and tests locally as a sanity check, commits, tags
-`v1.0.1`, bumps `main` to `1.0.2-SNAPSHOT` for continued development, and pushes both. Pushing
-the `v1.0.1` tag triggers [`.github/workflows/release.yml`](.github/workflows/release.yml), which
-builds the CLI jar from that tag in a clean CI environment and publishes it as a GitHub release —
-CI, not a local machine, produces the artifact people actually download.
+This bumps the POMs to `1.0.1`, builds and tests locally as a sanity check, commits, and opens
+your editor to write the tag's release notes (or pass a file instead:
+`just release 1.0.1 1.0.2-SNAPSHOT notes.txt`). It then bumps `main` to `1.0.2-SNAPSHOT` for
+continued development and pushes both. Pushing the `v1.0.1` tag triggers
+[`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the CLI jar from
+that tag in a clean CI environment and publishes it as a GitHub release using the tag's own
+message as the release notes (`gh release create --notes-from-tag`) — CI, not a local machine,
+produces the artifact people actually download, but the notes are still written by hand.

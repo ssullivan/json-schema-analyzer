@@ -24,13 +24,19 @@ run *args:
 clean:
     mvn clean
 
-# Cut a release: bump to `version`, tag, and push — .github/workflows/release.yml then
-# builds the jar and publishes the GitHub release. e.g. `just release 1.0.1 1.0.2-SNAPSHOT`
-release version next:
+# Cut a release: bump to `version`, tag with release notes, and push — release.yml then
+# builds the jar and publishes the GitHub release using the tag message as its notes.
+# e.g. `just release 1.0.1 1.0.2-SNAPSHOT` opens $EDITOR for the notes, or
+# `just release 1.0.1 1.0.2-SNAPSHOT notes.txt` reads them from a file.
+release version next notes_file='':
     #!/usr/bin/env bash
     set -euo pipefail
 
-    if [ -n "$(git status --porcelain)" ]; then
+    dirty_check=(git status --porcelain)
+    if [ -n "{{notes_file}}" ]; then
+        dirty_check+=(-- ":(exclude){{notes_file}}")
+    fi
+    if [ -n "$("${dirty_check[@]}")" ]; then
         echo "Working tree is not clean — commit or stash first" >&2
         exit 1
     fi
@@ -39,7 +45,11 @@ release version next:
     mvn clean install
     git add -A
     git commit -m "Release {{version}}"
-    git tag -a v{{version}} -m "v{{version}}"
+    if [ -n "{{notes_file}}" ]; then
+        git tag -a v{{version}} -F "{{notes_file}}"
+    else
+        git tag -a v{{version}}
+    fi
 
     mvn versions:set -DnewVersion={{next}} -DgenerateBackupPoms=false -q
     mvn -q clean install -DskipTests
