@@ -24,7 +24,7 @@ public class JsonSchemaAnalyzer {
      *
      * @param source a non-null {@link InputStream} that contains JSON
      * @return a non-null instance of {@link JsonType}
-     * @throws IOException
+     * @throws IOException if the source cannot be read or contains malformed JSON
      */
     public JsonType parse(InputStream source) throws IOException {
         Objects.requireNonNull(source, "The method parameter `source` must not be null");
@@ -95,7 +95,7 @@ public class JsonSchemaAnalyzer {
      * Convert a jackson {@link JsonToken} to one of our internal {@link JsonType} representations.
      *
      * @param jsonToken a non-null {@link JsonToken}
-     * @return one of {@link StringType}, {@link IntNumberType}, {@link FloatNumberType}, {@link NullType}, {@link BooleanType}
+     * @return the {@link ScalarType} matching the token
      */
     private static JsonType convertScalarToken(JsonToken jsonToken) {
         if (jsonToken == null) {
@@ -103,11 +103,11 @@ public class JsonSchemaAnalyzer {
         }
 
         return switch (jsonToken) {
-            case VALUE_TRUE, VALUE_FALSE -> BooleanType.instance();
-            case VALUE_NUMBER_FLOAT -> FloatNumberType.instance();
-            case VALUE_NUMBER_INT -> IntNumberType.instance();
-            case VALUE_STRING -> StringType.instance();
-            case VALUE_NULL -> NullType.instance();
+            case VALUE_TRUE, VALUE_FALSE -> ScalarType.BOOLEAN;
+            case VALUE_NUMBER_FLOAT -> ScalarType.FLOAT;
+            case VALUE_NUMBER_INT -> ScalarType.INTEGER;
+            case VALUE_STRING -> ScalarType.STRING;
+            case VALUE_NULL -> ScalarType.NULL;
             default -> throw new RuntimeException("Unsupported JSON ScalarType");
         };
     }

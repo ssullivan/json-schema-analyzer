@@ -13,10 +13,10 @@ class SchemaMergerTest {
 
     @Test
     void testFieldMissingFromOneObjectBecomesOptional() {
-        ObjectType a = ObjectType.of("id", IntNumberType.instance());
+        ObjectType a = ObjectType.of("id", ScalarType.INTEGER);
         ObjectType b = new ObjectType();
-        b.addField("id", IntNumberType.instance());
-        b.addField("email", StringType.instance());
+        b.addField("id", ScalarType.INTEGER);
+        b.addField("email", ScalarType.STRING);
 
         JsonType merged = SchemaMerger.merge(a, b);
 
@@ -24,36 +24,36 @@ class SchemaMergerTest {
         ObjectType objectType = (ObjectType) merged;
         assertFalse(objectType.isOptional("id"));
         assertTrue(objectType.isOptional("email"));
-        assertEquals(StringType.instance(), objectType.getFields().get("email"));
+        assertEquals(ScalarType.STRING, objectType.getFields().get("email"));
     }
 
     @Test
     void testConflictingScalarTypesBecomeUnion() {
-        ObjectType a = ObjectType.of("id", IntNumberType.instance());
-        ObjectType b = ObjectType.of("id", StringType.instance());
+        ObjectType a = ObjectType.of("id", ScalarType.INTEGER);
+        ObjectType b = ObjectType.of("id", ScalarType.STRING);
 
         JsonType merged = SchemaMerger.merge(a, b);
 
         assertInstanceOf(ObjectType.class, merged);
         JsonType idType = ((ObjectType) merged).getFields().get("id");
         assertInstanceOf(UnionType.class, idType);
-        assertEquals(Set.of(IntNumberType.instance(), StringType.instance()), ((UnionType) idType).getMembers());
+        assertEquals(Set.of(ScalarType.INTEGER, ScalarType.STRING), ((UnionType) idType).getMembers());
     }
 
     @Test
     void testIntAndFloatCollapseToNumber() {
-        ObjectType a = ObjectType.of("weight", IntNumberType.instance());
-        ObjectType b = ObjectType.of("weight", FloatNumberType.instance());
+        ObjectType a = ObjectType.of("weight", ScalarType.INTEGER);
+        ObjectType b = ObjectType.of("weight", ScalarType.FLOAT);
 
         JsonType merged = SchemaMerger.merge(a, b);
 
-        assertEquals(ObjectType.of("weight", NumberType.instance()), merged);
+        assertEquals(ObjectType.of("weight", ScalarType.NUMBER), merged);
     }
 
     @Test
     void testMergingIdenticalObjectsIntroducesNoUnionOrOptionality() {
-        ObjectType a = ObjectType.of("id", IntNumberType.instance());
-        ObjectType b = ObjectType.of("id", IntNumberType.instance());
+        ObjectType a = ObjectType.of("id", ScalarType.INTEGER);
+        ObjectType b = ObjectType.of("id", ScalarType.INTEGER);
 
         JsonType merged = SchemaMerger.merge(a, b);
 
@@ -63,25 +63,25 @@ class SchemaMergerTest {
 
     @Test
     void testMergingArraysPreservesHeterogeneousElementShapes() {
-        ArrayType circles = ArrayType.of(ObjectType.of("radius", IntNumberType.instance()));
-        ArrayType squares = ArrayType.of(ObjectType.of("side", IntNumberType.instance()));
+        ArrayType circles = ArrayType.of(ObjectType.of("radius", ScalarType.INTEGER));
+        ArrayType squares = ArrayType.of(ObjectType.of("side", ScalarType.INTEGER));
 
         JsonType merged = SchemaMerger.merge(circles, squares);
 
         assertInstanceOf(ArrayType.class, merged);
         ArrayType arrayType = (ArrayType) merged;
         assertEquals(2, arrayType.getFields().size());
-        assertTrue(arrayType.getFields().contains(ObjectType.of("radius", IntNumberType.instance())));
-        assertTrue(arrayType.getFields().contains(ObjectType.of("side", IntNumberType.instance())));
+        assertTrue(arrayType.getFields().contains(ObjectType.of("radius", ScalarType.INTEGER)));
+        assertTrue(arrayType.getFields().contains(ObjectType.of("side", ScalarType.INTEGER)));
     }
 
     @Test
     void testNestedObjectFieldsMergeRecursively() {
-        ObjectType a = ObjectType.of("product", ObjectType.of("name", StringType.instance()));
+        ObjectType a = ObjectType.of("product", ObjectType.of("name", ScalarType.STRING));
 
         ObjectType productB = new ObjectType();
-        productB.addField("name", StringType.instance());
-        productB.addField("weight", FloatNumberType.instance());
+        productB.addField("name", ScalarType.STRING);
+        productB.addField("weight", ScalarType.FLOAT);
         ObjectType b = ObjectType.of("product", productB);
 
         JsonType merged = SchemaMerger.merge(a, b);
@@ -93,20 +93,20 @@ class SchemaMergerTest {
         ObjectType mergedProduct = (ObjectType) productType;
         assertFalse(mergedProduct.isOptional("name"));
         assertTrue(mergedProduct.isOptional("weight"));
-        assertEquals(FloatNumberType.instance(), mergedProduct.getFields().get("weight"));
+        assertEquals(ScalarType.FLOAT, mergedProduct.getFields().get("weight"));
     }
 
     @Test
     void testOptionalityCarriesForwardAcrossMultipleMerges() {
         ObjectType record1 = new ObjectType();
-        record1.addField("id", IntNumberType.instance());
-        record1.addField("email", StringType.instance());
+        record1.addField("id", ScalarType.INTEGER);
+        record1.addField("email", ScalarType.STRING);
 
-        ObjectType record2 = ObjectType.of("id", IntNumberType.instance());
+        ObjectType record2 = ObjectType.of("id", ScalarType.INTEGER);
 
         ObjectType record3 = new ObjectType();
-        record3.addField("id", IntNumberType.instance());
-        record3.addField("email", StringType.instance());
+        record3.addField("id", ScalarType.INTEGER);
+        record3.addField("email", ScalarType.STRING);
 
         JsonType merged = List.<JsonType>of(record1, record2, record3).stream()
                 .reduce(SchemaMerger::merge)

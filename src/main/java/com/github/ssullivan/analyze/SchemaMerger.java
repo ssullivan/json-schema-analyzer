@@ -24,7 +24,7 @@ public final class SchemaMerger {
             return a;
         }
         if (isNumberish(a) && isNumberish(b)) {
-            return NumberType.instance();
+            return ScalarType.NUMBER;
         }
         if (a instanceof ObjectType oa && b instanceof ObjectType ob) {
             return mergeObjects(oa, ob);
@@ -93,11 +93,11 @@ public final class SchemaMerger {
     private static void collapseNumbers(Set<JsonType> types) {
         if (types.stream().filter(SchemaMerger::isNumberish).count() > 1) {
             types.removeIf(SchemaMerger::isNumberish);
-            types.add(NumberType.instance());
+            types.add(ScalarType.NUMBER);
         }
     }
 
     private static boolean isNumberish(JsonType type) {
-        return type instanceof IntNumberType || type instanceof FloatNumberType || type instanceof NumberType;
+        return type == ScalarType.INTEGER || type == ScalarType.FLOAT || type == ScalarType.NUMBER;
     }
 }

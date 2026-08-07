@@ -21,7 +21,7 @@ class MainTest {
         int exitCode = commandLine.execute("-i", file.toString());
 
         assertEquals(0, exitCode);
-        assertEquals(ObjectType.of("id", IntNumberType.instance()), commandLine.getExecutionResult());
+        assertEquals(ObjectType.of("id", ScalarType.INTEGER), commandLine.getExecutionResult());
     }
 
     @Test
@@ -60,7 +60,7 @@ class MainTest {
         int exitCode = commandLine.execute("-i", file.toString(), "-m");
 
         assertEquals(0, exitCode);
-        assertEquals(ObjectType.of("id", IntNumberType.instance()), commandLine.getExecutionResult());
+        assertEquals(ObjectType.of("id", ScalarType.INTEGER), commandLine.getExecutionResult());
     }
 
     @Test

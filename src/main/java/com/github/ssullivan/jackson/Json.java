@@ -19,39 +19,9 @@ public final class Json {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         SimpleModule module = new SimpleModule();
-        module.addSerializer(StringType.class, new JsonSerializer<>() {
+        module.addSerializer(ScalarType.class, new JsonSerializer<>() {
             @Override
-            public void serialize(StringType jsonType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-                jsonGenerator.writeString(jsonType.toString());
-            }
-        });
-        module.addSerializer(FloatNumberType.class, new JsonSerializer<>() {
-            @Override
-            public void serialize(FloatNumberType jsonType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-                jsonGenerator.writeString(jsonType.toString());
-            }
-        });
-        module.addSerializer(IntNumberType.class, new JsonSerializer<>() {
-            @Override
-            public void serialize(IntNumberType jsonType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-                jsonGenerator.writeString(jsonType.toString());
-            }
-        });
-        module.addSerializer(BooleanType.class, new JsonSerializer<>() {
-            @Override
-            public void serialize(BooleanType jsonType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-                jsonGenerator.writeString(jsonType.toString());
-            }
-        });
-        module.addSerializer(NullType.class, new JsonSerializer<>() {
-            @Override
-            public void serialize(NullType jsonType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
-                jsonGenerator.writeString(jsonType.toString());
-            }
-        });
-        module.addSerializer(NumberType.class, new JsonSerializer<>() {
-            @Override
-            public void serialize(NumberType jsonType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+            public void serialize(ScalarType jsonType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
                 jsonGenerator.writeString(jsonType.toString());
             }
         });
@@ -59,7 +29,7 @@ public final class Json {
             @Override
             public void serialize(UnionType unionType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
                 String joined = unionType.getMembers().stream()
-                        .map(String::valueOf)
+                        .map(Json::unionMemberLabel)
                         .sorted()
                         .collect(Collectors.joining("|"));
                 jsonGenerator.writeString(joined);
@@ -93,4 +63,13 @@ public final class Json {
         return objectMapper;
     }
 
+    private static String unionMemberLabel(JsonType type) {
+        if (type instanceof ObjectType) {
+            return "object";
+        }
+        if (type instanceof ArrayType) {
+            return "array";
+        }
+        return String.valueOf(type);
+    }
 }

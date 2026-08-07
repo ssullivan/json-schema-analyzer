@@ -18,8 +18,8 @@ class JsonSchemaAnalyzerTest {
 
     @Test
     void testAddingArrayFields() {
-        ArrayType boolArray = ArrayType.of(BooleanType.instance());
-        ArrayType intArray = ArrayType.of(IntNumberType.instance());
+        ArrayType boolArray = ArrayType.of(ScalarType.BOOLEAN);
+        ArrayType intArray = ArrayType.of(ScalarType.INTEGER);
 
         ArrayType arrayType = ArrayType.of(boolArray, intArray);
         assertEquals(2, arrayType.getFields().size());
@@ -42,10 +42,10 @@ class JsonSchemaAnalyzerTest {
         // We should have the following types
 
         ArrayType expected = ArrayType.of(
-                IntNumberType.instance(),
-                BooleanType.instance(),
-                StringType.instance(),
-                FloatNumberType.instance()
+                ScalarType.INTEGER,
+                ScalarType.BOOLEAN,
+                ScalarType.STRING,
+                ScalarType.FLOAT
 
         );
 
@@ -72,12 +72,12 @@ class JsonSchemaAnalyzerTest {
 
         // We should have the following types
         assertInstanceOf(ObjectType.class, schema);
-        assertTrue(((ObjectType) schema).contains("integer", IntNumberType.instance()));
-        assertTrue(((ObjectType) schema).contains("long", IntNumberType.instance()));
-        assertTrue(((ObjectType) schema).contains("boolean", BooleanType.instance()));
-        assertTrue(((ObjectType) schema).contains("string", StringType.instance()));
-        assertTrue(((ObjectType) schema).contains("float", FloatNumberType.instance()));
-        assertTrue(((ObjectType) schema).contains("array", ArrayType.of(IntNumberType.instance())));
+        assertTrue(((ObjectType) schema).contains("integer", ScalarType.INTEGER));
+        assertTrue(((ObjectType) schema).contains("long", ScalarType.INTEGER));
+        assertTrue(((ObjectType) schema).contains("boolean", ScalarType.BOOLEAN));
+        assertTrue(((ObjectType) schema).contains("string", ScalarType.STRING));
+        assertTrue(((ObjectType) schema).contains("float", ScalarType.FLOAT));
+        assertTrue(((ObjectType) schema).contains("array", ArrayType.of(ScalarType.INTEGER)));
     }
 
     @Test
@@ -96,7 +96,7 @@ class JsonSchemaAnalyzerTest {
                                 ObjectType.of("a3",
                                         ObjectType.of("a4",
                                                 ObjectType.of("a5",
-                                                        ObjectType.of("a6", IntNumberType.instance())))))),
+                                                        ObjectType.of("a6", ScalarType.INTEGER)))))),
                 schema
         );
     }
@@ -118,7 +118,7 @@ class JsonSchemaAnalyzerTest {
                                         ArrayType.of(
                                                 ArrayType.of(
                                                         ArrayType.of(
-                                                                IntNumberType.instance()
+                                                                ScalarType.INTEGER
                                                         )
                                                 )
                                         )
@@ -141,7 +141,7 @@ class JsonSchemaAnalyzerTest {
                                 "a1", ArrayType.of(
                                         ObjectType.of(
                                                 "b",
-                                                ArrayType.of(IntNumberType.instance())
+                                                ArrayType.of(ScalarType.INTEGER)
                                         )
                                 )
                         )
@@ -170,7 +170,7 @@ class JsonSchemaAnalyzerTest {
         ArrayType arrayType = (ArrayType) schema;
         // 10 distinct "fN" shapes + 1 deduplicated "dup" shape
         assertEquals(11, arrayType.getFields().size());
-        assertTrue(arrayType.getFields().contains(ObjectType.of("dup", IntNumberType.instance())));
+        assertTrue(arrayType.getFields().contains(ObjectType.of("dup", ScalarType.INTEGER)));
     }
 
     @Test
@@ -185,7 +185,7 @@ class JsonSchemaAnalyzerTest {
 
         // The array field should nest under its enclosing object, not flatten to a dotted key
         assertEquals(
-                ObjectType.of("a1", ObjectType.of("a2", ArrayType.of(IntNumberType.instance()))),
+                ObjectType.of("a1", ObjectType.of("a2", ArrayType.of(ScalarType.INTEGER))),
                 schema
         );
     }
@@ -221,15 +221,15 @@ class JsonSchemaAnalyzerTest {
         assertFalse(objectType.isOptional("name"));
         assertTrue(objectType.isOptional("email"));
 
-        assertEquals(StringType.instance(), objectType.getFields().get("name"));
+        assertEquals(ScalarType.STRING, objectType.getFields().get("name"));
         assertInstanceOf(UnionType.class, objectType.getFields().get("id"));
         assertEquals(
-                Set.of(IntNumberType.instance(), StringType.instance()),
+                Set.of(ScalarType.INTEGER, ScalarType.STRING),
                 ((UnionType) objectType.getFields().get("id")).getMembers()
         );
         assertInstanceOf(UnionType.class, objectType.getFields().get("email"));
         assertEquals(
-                Set.of(StringType.instance(), NullType.instance()),
+                Set.of(ScalarType.STRING, ScalarType.NULL),
                 ((UnionType) objectType.getFields().get("email")).getMembers()
         );
     }
