@@ -6,6 +6,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * The shape of a JSON array: the set of distinct element shapes observed within it. Elements
+ * are deliberately not merged against each other — an array is allowed to be a legitimate
+ * mix of shapes (e.g. a discriminated union), so {@code [1, "a", {"id": 1}]} keeps all three as
+ * separate entries rather than collapsing them. Iteration order reflects first appearance.
+ */
 public final class ArrayType implements JsonType {
     private final Set<JsonType> fields = new LinkedHashSet<>();
 

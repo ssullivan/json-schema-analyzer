@@ -3,6 +3,14 @@ json-schema-explorer
 
 A small command line utility to understand the fields, and datatypes in a JSON document.
 
+## Contents
+* [Requirements](#requirements)
+* [Build](#build)
+* [CLI](#cli)
+* [Examples](#examples)
+* [Error Handling](#error-handling)
+* [Using as a Library](#using-as-a-library)
+
 ## Requirements
 * JDK >= 17
 * Maven
@@ -228,6 +236,21 @@ would produce the following output
 }
 ```
 
+## Error Handling
+
+Failures are reported as a single clean line on stderr — no stack trace — describing what was
+expected and the exact line/column where things went wrong, then exit with a non-zero status:
+
+```shell
+$ java -jar json-schema-explorer-<version>.jar -i bad.json
+Error: Malformed JSON (line 2, column 1): Unexpected end-of-input within/between Object entries
+```
+
+```shell
+$ java -jar json-schema-explorer-<version>.jar -i missing.json
+Error: missing.json (No such file or directory)
+```
+
 ## Using as a Library
 
 `json-schema-explorer-core` has no CLI dependencies — depend on it directly to infer a JSON
@@ -253,3 +276,9 @@ if (schema instanceof ObjectType objectType) {
 `JsonType` is a sealed interface (`ObjectType`, `ArrayType`, `ScalarType`, `UnionType`), so callers
 can pattern-match on it directly. `SchemaMerger.merge(a, b)` is available the same way for folding
 multiple samples into one shape, exactly as the CLI's `-m` flag does internally.
+
+`parse()` distinguishes two kinds of failure: a checked `IOException` if the stream itself can't
+be read (a genuine I/O error), and an unchecked `JsonSchemaAnalysisException` if the stream reads
+fine but its content isn't valid or supported JSON — malformed syntax, an empty document, and so
+on. The latter's message already includes the line and column where the problem was found, so it
+can be surfaced to a caller as-is without extra formatting.

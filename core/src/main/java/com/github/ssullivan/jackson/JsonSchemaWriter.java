@@ -8,6 +8,7 @@ import com.github.ssullivan.types.*;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -21,7 +22,14 @@ public final class JsonSchemaWriter {
     private JsonSchemaWriter() {
     }
 
+    /**
+     * @param type a non-null shape, typically produced by {@link com.github.ssullivan.analyze.JsonSchemaAnalyzer}
+     *             or {@link com.github.ssullivan.analyze.SchemaMerger}
+     * @return the equivalent JSON Schema draft-07 document
+     */
     public static ObjectNode toJsonSchema(JsonType type) {
+        Objects.requireNonNull(type, "JsonSchemaWriter.toJsonSchema: parameter `type` must not be null");
+
         ObjectNode root = JsonNodeFactory.instance.objectNode();
         root.put("$schema", DRAFT_07);
         root.setAll(toSchemaNode(type));

@@ -138,4 +138,9 @@ class JsonSchemaWriterTest {
         assertTrue(schema.get("anyOf").isArray());
         assertEquals(2, schema.get("anyOf").size());
     }
+
+    @Test
+    void testToJsonSchemaRejectsNull() {
+        assertThrows(NullPointerException.class, () -> JsonSchemaWriter.toJsonSchema(null));
+    }
 }

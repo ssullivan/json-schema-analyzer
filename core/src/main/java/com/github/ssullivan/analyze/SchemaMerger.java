@@ -3,6 +3,7 @@ package com.github.ssullivan.analyze;
 import com.github.ssullivan.types.*;
 
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -19,7 +20,17 @@ public final class SchemaMerger {
     private SchemaMerger() {
     }
 
+    /**
+     * Merges two independently-inferred shapes into one, as described in the class Javadoc.
+     *
+     * @param a a non-null shape to merge
+     * @param b a non-null shape to merge
+     * @return the combined shape
+     */
     public static JsonType merge(JsonType a, JsonType b) {
+        Objects.requireNonNull(a, "SchemaMerger.merge: parameter `a` must not be null");
+        Objects.requireNonNull(b, "SchemaMerger.merge: parameter `b` must not be null");
+
         if (a.equals(b)) {
             return a;
         }

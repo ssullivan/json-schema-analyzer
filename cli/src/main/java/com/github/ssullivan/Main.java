@@ -46,6 +46,10 @@ public class Main {
     public static void main(String[] args) throws IOException {
         JsonSchemaAnalyzeCommand command = new JsonSchemaAnalyzeCommand();
         CommandLine commandLine = new CommandLine(command);
+        commandLine.setExecutionExceptionHandler((exception, cl, parseResult) -> {
+            System.err.println(errorLine(exception));
+            return CommandLine.ExitCode.SOFTWARE;
+        });
         int exitCode = commandLine.execute(args);
 
         if (exitCode == 0) {
@@ -55,5 +59,17 @@ public class Main {
         }
 
         System.exit(exitCode);
+    }
+
+    /**
+     * Formats an execution-time failure as a single clean line — no stack trace. Every exception
+     * that reaches here already carries a clear message ({@link JsonSchemaAnalyzer}'s own
+     * malformed/unsupported-input errors, {@link java.io.FileNotFoundException}'s built-in path
+     * detail), so one uniform format covers every case without needing to classify exception
+     * types.
+     */
+    static String errorLine(Throwable exception) {
+        String message = exception.getMessage();
+        return "Error: " + (message != null ? message : exception.getClass().getSimpleName());
     }
 }

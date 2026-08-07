@@ -12,6 +12,14 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Renders a {@link JsonType} shape as this project's compact notation: scalar types print as
+ * their name ({@code "string"}, {@code "integer"}, ...), a {@link UnionType} prints as its
+ * members joined with {@code |} (e.g. {@code "integer|string"}), and an {@link ObjectType}'s
+ * optional fields get a {@code ?} suffix on the key (e.g. {@code "email?"}). {@link #MAPPER} is
+ * a shared, pre-configured {@code ObjectMapper} — safe to reuse across threads, per Jackson's own
+ * {@code ObjectMapper} contract, since it's never reconfigured after construction.
+ */
 public final class Json {
     public static final ObjectMapper MAPPER = configureObjectMapper();
 

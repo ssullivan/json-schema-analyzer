@@ -115,4 +115,10 @@ class SchemaMergerTest {
         assertInstanceOf(ObjectType.class, merged);
         assertTrue(((ObjectType) merged).isOptional("email"));
     }
+
+    @Test
+    void testMergeRejectsNullArguments() {
+        assertThrows(NullPointerException.class, () -> SchemaMerger.merge(null, ScalarType.STRING));
+        assertThrows(NullPointerException.class, () -> SchemaMerger.merge(ScalarType.STRING, null));
+    }
 }

@@ -7,6 +7,13 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+/**
+ * The shape of a JSON object: field names mapped to the shape observed for each, plus which of
+ * those fields are optional (present in some but not all merged samples — see
+ * {@link com.github.ssullivan.analyze.SchemaMerger}). A freshly-parsed object from a single
+ * document has no optional fields; optionality only appears once shapes have been merged.
+ * Fields are kept in sorted-by-name order for deterministic output.
+ */
 public final class ObjectType implements JsonType {
     private final Map<String, JsonType> fields = new TreeMap<>();
     private final Set<String> optionalFields = new TreeSet<>();

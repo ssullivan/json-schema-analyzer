@@ -119,6 +119,16 @@ class MainTest {
         assertNotEquals(0, exitCode);
     }
 
+    @Test
+    void testErrorLineUsesExceptionMessage() {
+        assertEquals("Error: something went wrong", Main.errorLine(new RuntimeException("something went wrong")));
+    }
+
+    @Test
+    void testErrorLineFallsBackToClassNameWhenMessageIsNull() {
+        assertEquals("Error: RuntimeException", Main.errorLine(new RuntimeException()));
+    }
+
     private static Path writeJson(Path dir, String json) throws IOException {
         Path file = dir.resolve("input.json");
         Files.writeString(file, json);

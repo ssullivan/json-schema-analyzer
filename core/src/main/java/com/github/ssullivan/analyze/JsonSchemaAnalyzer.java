@@ -2,6 +2,7 @@ package com.github.ssullivan.analyze;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.github.ssullivan.types.*;
 
@@ -24,24 +25,31 @@ public class JsonSchemaAnalyzer {
      *
      * @param source a non-null {@link InputStream} that contains JSON
      * @return a non-null instance of {@link JsonType}
-     * @throws IOException if the source cannot be read or contains malformed JSON
+     * @throws IOException                if the source itself cannot be read (a genuine I/O
+     *                                     failure)
+     * @throws JsonSchemaAnalysisException if the source can be read but its content isn't
+     *                                     analyzable (malformed or unsupported JSON)
      */
     public JsonType parse(InputStream source) throws IOException {
         Objects.requireNonNull(source, "The method parameter `source` must not be null");
 
         try (JsonParser jParser = JSON_FACTORY.createParser(source)) {
-            jParser.nextToken();
-            JsonToken currentToken = jParser.getCurrentToken();
-            if (currentToken == JsonToken.START_OBJECT) {
-                ObjectType root = new ObjectType();
-                handleObjectStruct(jParser, root);
-                return root;
-            } else if (currentToken == JsonToken.START_ARRAY) {
-                return handleObjectArray(jParser);
-            } else if (currentToken != null && currentToken.isScalarValue()) {
-                return convertScalarToken(currentToken);
-            } else {
-                throw new RuntimeException("Unsupported root");
+            try {
+                jParser.nextToken();
+                JsonToken currentToken = jParser.getCurrentToken();
+                if (currentToken == JsonToken.START_OBJECT) {
+                    ObjectType root = new ObjectType();
+                    handleObjectStruct(jParser, root);
+                    return root;
+                } else if (currentToken == JsonToken.START_ARRAY) {
+                    return handleObjectArray(jParser);
+                } else if (currentToken != null && currentToken.isScalarValue()) {
+                    return convertScalarToken(jParser, currentToken);
+                } else {
+                    throw JsonSchemaAnalysisException.unsupportedRoot(currentToken, jParser.getCurrentLocation());
+                }
+            } catch (JsonProcessingException e) {
+                throw JsonSchemaAnalysisException.malformedJson(e);
             }
         }
     }
@@ -60,7 +68,7 @@ public class JsonSchemaAnalyzer {
                 value = handleObjectArray(jParser);
             }
             else if (currentToken.isScalarValue()) {
-                value = convertScalarToken(currentToken);
+                value = convertScalarToken(jParser, currentToken);
             }
             else {
                 continue;
@@ -77,7 +85,7 @@ public class JsonSchemaAnalyzer {
             JsonToken currentToken = jParser.getCurrentToken();
 
             if (currentToken.isScalarValue()) {
-                arrayType.addField(convertScalarToken(currentToken));
+                arrayType.addField(convertScalarToken(jParser, currentToken));
             }
             else if (currentToken == JsonToken.START_OBJECT) {
                 ObjectType objectType = new ObjectType();
@@ -94,10 +102,12 @@ public class JsonSchemaAnalyzer {
     /**
      * Convert a jackson {@link JsonToken} to one of our internal {@link JsonType} representations.
      *
+     * @param jParser   the parser {@code jsonToken} was read from, used only to report a precise
+     *                  location if {@code jsonToken} turns out to be unsupported
      * @param jsonToken a non-null {@link JsonToken}
      * @return the {@link ScalarType} matching the token
      */
-    private static JsonType convertScalarToken(JsonToken jsonToken) {
+    private static JsonType convertScalarToken(JsonParser jParser, JsonToken jsonToken) {
         if (jsonToken == null) {
             throw new NullPointerException("JsonToken must not be null");
         }
@@ -108,7 +118,7 @@ public class JsonSchemaAnalyzer {
             case VALUE_NUMBER_INT -> ScalarType.INTEGER;
             case VALUE_STRING -> ScalarType.STRING;
             case VALUE_NULL -> ScalarType.NULL;
-            default -> throw new RuntimeException("Unsupported JSON ScalarType");
+            default -> throw JsonSchemaAnalysisException.unsupportedScalarToken(jsonToken, jParser.getCurrentLocation());
         };
     }
 }

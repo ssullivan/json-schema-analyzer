@@ -1,6 +1,7 @@
 package com.github.ssullivan;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.ssullivan.analyze.JsonSchemaAnalysisException;
 import com.github.ssullivan.analyze.JsonSchemaAnalyzer;
 import com.github.ssullivan.analyze.SchemaMerger;
 import com.github.ssullivan.types.*;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -243,11 +245,47 @@ class JsonSchemaAnalyzerTest {
     }
 
     @Test
-    void testEmptyInputThrowsUnsupportedRoot() {
-        // Empty input has no first token to inspect; this must fail cleanly rather than NPE
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> inferSchema(""));
+    void testEmptyInputThrowsJsonSchemaAnalysisExceptionWithHelpfulMessage() {
+        // Empty input has no first token to inspect; this must fail cleanly rather than NPE,
+        // with a message that says what was expected and where, not just "unsupported root"
+        JsonSchemaAnalysisException exception =
+                assertThrows(JsonSchemaAnalysisException.class, () -> inferSchema(""));
 
-        assertEquals("Unsupported root", exception.getMessage());
+        assertTrue(exception.getMessage().contains("empty"));
+        assertTrue(exception.getMessage().contains("line 1"));
+        assertTrue(exception.getMessage().contains("object"));
+        assertTrue(exception.getMessage().contains("array"));
+    }
+
+    @Test
+    void testMalformedJsonThrowsJsonSchemaAnalysisExceptionWithCleanMessage() {
+        // Truncated mid-object: Jackson's own parse failure, not one of our hand-written cases
+        JsonSchemaAnalysisException exception =
+                assertThrows(JsonSchemaAnalysisException.class, () -> inferSchema("{\"a\": "));
+
+        assertTrue(exception.getMessage().contains("line"));
+        assertTrue(exception.getMessage().contains("column"));
+        // Jackson's raw message leaks internal detail like this; ours must not
+        assertFalse(exception.getMessage().contains("REDACTED"));
+        assertFalse(exception.getMessage().contains("StreamReadFeature"));
+        assertNotNull(exception.getCause());
+    }
+
+    @Test
+    void testGenuineIoFailurePropagatesUnwrapped() {
+        // A real I/O failure (not a content problem) must stay a checked IOException, not get
+        // folded into JsonSchemaAnalysisException
+        InputStream brokenStream = new InputStream() {
+            @Override
+            public int read() throws IOException {
+                throw new IOException("disk on fire");
+            }
+        };
+
+        JsonSchemaAnalyzer analyzer = new JsonSchemaAnalyzer();
+        IOException exception = assertThrows(IOException.class, () -> analyzer.parse(brokenStream));
+
+        assertEquals("disk on fire", exception.getMessage());
     }
 
     private JsonType inferSchema(String json) throws IOException {
