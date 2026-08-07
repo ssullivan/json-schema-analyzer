@@ -15,7 +15,7 @@
     <description>Command line utility to understand the fields, and datatypes in a JSON document.</description>
 
     <properties>
-        <start-class>com.github.ssullivan.Main</start-class>
+        <start-class>io.github.ssullivan.Main</start-class>
         <!-- Only json-schema-explorer-core is published to Maven Central; this is the CLI app. -->
         <maven.deploy.skip>true</maven.deploy.skip>
     </properties>

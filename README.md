@@ -10,6 +10,7 @@ A small command line utility to understand the fields, and datatypes in a JSON d
 * [Examples](#examples)
 * [Error Handling](#error-handling)
 * [Using as a Library](#using-as-a-library)
+* [Versioning](#versioning)
 * [Releasing](#releasing)
 
 ## Requirements
@@ -290,6 +291,21 @@ be read (a genuine I/O error), and an unchecked `JsonSchemaAnalysisException` if
 fine but its content isn't valid or supported JSON — malformed syntax, an empty document, and so
 on. The latter's message already includes the line and column where the problem was found, so it
 can be surfaced to a caller as-is without extra formatting.
+
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
+
+* **MAJOR** — a breaking change to `json-schema-explorer-core`'s public API (removing or
+  renaming a public class/method, changing a method signature, changing what `JsonType`
+  permits) or to the CLI's flags/output format.
+* **MINOR** — new backward-compatible functionality: a new CLI flag, a new public method, a new
+  output mode.
+* **PATCH** — backward-compatible bug fixes, documentation, internal refactors, and dependency
+  bumps that don't change public behavior.
+
+`main` always carries a `-SNAPSHOT` suffix on the next unreleased version; see
+[Releasing](#releasing) for how a version actually gets cut.
 
 ## Releasing
 
