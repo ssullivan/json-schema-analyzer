@@ -15,7 +15,23 @@ import java.io.InputStream;
 import java.util.concurrent.Callable;
 
 public class Main {
-    @CommandLine.Command(name = "json-analyze")
+    /**
+     * Reports the version stamped into the shaded jar's manifest, so {@code --version} can't
+     * drift out of sync with the POM. Falls back to {@code dev} when running from
+     * {@code target/classes}, where there is no manifest to read.
+     */
+    static class VersionProvider implements CommandLine.IVersionProvider {
+        @Override
+        public String[] getVersion() {
+            String version = Main.class.getPackage().getImplementationVersion();
+            return new String[]{"json-analyze " + (version != null ? version : "dev")};
+        }
+    }
+
+    @CommandLine.Command(name = "json-analyze",
+            mixinStandardHelpOptions = true,
+            versionProvider = VersionProvider.class,
+            description = "Describes the fields and datatypes in a JSON document.")
     static class JsonSchemaAnalyzeCommand implements Callable<JsonType> {
         @CommandLine.Option(names = {"-i", "--input-file"}, description = "The JSON file to analyze; reads from stdin if omitted")
         private File file;
@@ -62,8 +78,10 @@ public class Main {
         });
         int exitCode = commandLine.execute(args);
 
-        if (exitCode == 0) {
-            JsonType result = commandLine.getExecutionResult();
+        // --help and --version also exit 0, but skip call() entirely and so leave no result
+        // behind; without this guard they would print a trailing "null".
+        JsonType result = commandLine.getExecutionResult();
+        if (exitCode == 0 && result != null) {
             if (command.llm) {
                 System.out.println(LlmWriter.write(result));
             } else {

@@ -155,6 +155,35 @@ class MainTest {
     }
 
     @Test
+    void testHelpExitsZeroWithNoResultToPrint() {
+        // main() only prints when the result is non-null; --help exits 0 without running
+        // call(), so a missing guard there would print a trailing "null" after the usage text.
+        for (String flag : new String[]{"-h", "--help"}) {
+            CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+            assertEquals(0, commandLine.execute(flag));
+            assertNull(commandLine.getExecutionResult());
+        }
+    }
+
+    @Test
+    void testVersionExitsZeroWithNoResultToPrint() {
+        for (String flag : new String[]{"-V", "--version"}) {
+            CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+            assertEquals(0, commandLine.execute(flag));
+            assertNull(commandLine.getExecutionResult());
+        }
+    }
+
+    @Test
+    void testVersionProviderFallsBackWhenNoManifestIsPresent() {
+        // Tests run from target/classes, where there is no jar manifest to read.
+        String[] version = new Main.VersionProvider().getVersion();
+
+        assertEquals(1, version.length);
+        assertTrue(version[0].startsWith("json-analyze "));
+    }
+
+    @Test
     void testErrorLineUsesExceptionMessage() {
         assertEquals("Error: something went wrong", Main.errorLine(new RuntimeException("something went wrong")));
     }

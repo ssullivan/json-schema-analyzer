@@ -37,7 +37,9 @@ builds both modules and produces the executable CLI JAR at
 
 ## CLI 
 ```shell
-Usage: json-analyze [-lms] [-i=<file>]
+Usage: json-analyze [-hlmsV] [-i=<file>]
+Describes the fields and datatypes in a JSON document.
+  -h, --help                Show this help message and exit.
   -i, --input-file=<file>   The JSON file to analyze; reads from stdin if
                               omitted
   -l, --llm                 Print the shape in a compact, punctuation-free
@@ -47,6 +49,7 @@ Usage: json-analyze [-lms] [-i=<file>]
                               sample and merge them into a single shape
   -s, --json-schema         Print the shape as a JSON Schema (draft-07)
                               document instead of the default compact notation
+  -V, --version             Print version information and exit.
 ```
 
 `-i` is optional — omit it to pipe JSON in from stdin instead:
