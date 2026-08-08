@@ -21,7 +21,8 @@ into an LLM prompt cheaply — see [Example6](#example6-llm-optimized-output).
 
 ## Requirements
 * JDK >= 17
-* Maven
+* Maven — optional; the bundled `./mvnw` wrapper downloads a pinned version if you'd rather not
+  install one
 
 ## Build
 
@@ -31,7 +32,7 @@ This is a two-module Maven project:
   executable fat JAR via the maven-shade-plugin.
 
 ```shell
-mvn clean install
+./mvnw clean install
 ```
 
 builds both modules and produces the executable CLI JAR at

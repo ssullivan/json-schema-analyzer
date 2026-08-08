@@ -27,7 +27,7 @@ jobs:
           distribution: 'temurin'
           cache: maven
       - name: Build with Maven
-        run: mvn clean verify --batch-mode
+        run: ./mvnw clean verify --batch-mode
       - name: Locate CLI jar and checksum it
         id: jar
         # The checksum is written with the bare filename (not the cli/target/... path) so that

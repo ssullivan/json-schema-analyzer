@@ -3,11 +3,11 @@ _default:
 
 # Build all modules and run the full test suite
 build:
-    mvn clean install
+    ./mvnw clean install
 
 # Run tests only
 test:
-    mvn test
+    ./mvnw test
 
 # Run the CLI against a file, e.g. `just run -i example.json` or `just run < example.json`
 run *args:
@@ -22,7 +22,7 @@ run *args:
 
 # Remove build output
 clean:
-    mvn clean
+    ./mvnw clean
 
 # Cut a release: bump to `version`, tag with release notes, and push — release.yml then
 # builds the jar and publishes the GitHub release using the tag message as its notes.
@@ -41,8 +41,8 @@ release version next notes_file='':
         exit 1
     fi
 
-    mvn versions:set -DnewVersion={{version}} -DgenerateBackupPoms=false -q
-    mvn clean install
+    ./mvnw versions:set -DnewVersion={{version}} -DgenerateBackupPoms=false -q
+    ./mvnw clean install
     git add -A "${exclude_notes[@]}"
     git commit -m "Release {{version}}"
     # --cleanup=verbatim keeps lines starting with '#'. Without it git treats them as
@@ -53,8 +53,8 @@ release version next notes_file='':
         git tag -a v{{version}}
     fi
 
-    mvn versions:set -DnewVersion={{next}} -DgenerateBackupPoms=false -q
-    mvn -q clean install -DskipTests
+    ./mvnw versions:set -DnewVersion={{next}} -DgenerateBackupPoms=false -q
+    ./mvnw -q clean install -DskipTests
     git add -A "${exclude_notes[@]}"
     git commit -m "Bump version to {{next}} for continued development"
 

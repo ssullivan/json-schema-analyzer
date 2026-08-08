@@ -35,4 +35,4 @@ jobs:
         distribution: 'temurin'
         cache: maven
     - name: Build with Maven
-      run: mvn clean verify --batch-mode
+      run: ./mvnw clean verify --batch-mode
