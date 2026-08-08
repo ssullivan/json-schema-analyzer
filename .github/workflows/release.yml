@@ -9,7 +9,102 @@ permissions:
   contents: write
 
 jobs:
+  # One native binary per platform. native-image can only build for the OS it runs on, so this
+  # has to be a matrix rather than a cross-compile.
+  native:
+    # Non-blocking on purpose. The release job depends on this one, so without it a single
+    # flaky platform would block the entire release — including the jar, which has nothing to
+    # do with native-image. A missing binary is a gap; a missing release is an outage.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+          - os: macos-latest
+            platform: darwin-arm64
+          - os: macos-13
+            platform: darwin-x64
+          - os: windows-latest
+            platform: windows-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm-community'
+          cache: maven
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build native binary
+        shell: bash
+        run: ./mvnw package -P native -DskipTests --batch-mode
+
+      # A binary that builds but does not run is worse than no binary, and this is the only job
+      # with the right OS to find out. --version doubly matters: it reads a bundled resource, and
+      # a native image drops resources unless they are explicitly included.
+      - name: Smoke-test the binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `[ x ] && y` would abort the whole step under `set -e` whenever the test is false,
+          # so every one of these branches is a real if/fi.
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            bin=cli/target/json-analyze.exe
+          else
+            bin=cli/target/json-analyze
+          fi
+
+          version=$("$bin" --version)
+          echo "reported: $version"
+          case "$version" in
+            *dev*) echo "::error::version resource missing from the native image" && exit 1 ;;
+          esac
+
+          "$bin" --help > /dev/null
+
+          shape=$(echo '{"id": 1, "name": "a"}' | "$bin" -l)
+          expected=$'id: integer\nname: string'
+          [ "$shape" = "$expected" ] || { echo "::error::unexpected output: $shape"; exit 1; }
+
+      - name: Rename and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          name="json-analyze-${version}-${{ matrix.platform }}"
+          src=cli/target/json-analyze
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            name="$name.exe"
+            src=cli/target/json-analyze.exe
+          fi
+
+          mkdir -p dist
+          cp "$src" "dist/$name"
+
+          # macOS ships `shasum`, not `sha256sum`. Both emit the same "<hash>  <file>" format
+          # that `sha256sum -c` expects, and the bare filename keeps verification working from
+          # whatever directory a consumer downloads into.
+          cd dist
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "$name" > "$name.sha256"
+          else
+            shasum -a 256 "$name" > "$name.sha256"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+
   release:
+    needs: native
     runs-on: ubuntu-latest
 
     steps:
@@ -37,6 +132,26 @@ jobs:
           (cd "$(dirname "$jar")" && sha256sum "$(basename "$jar")" > "$(basename "$jar").sha256")
           echo "path=$jar" >> "$GITHUB_OUTPUT"
           echo "sha256=$jar.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Collect native binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: dist
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: List native assets
+        id: native
+        # dist/ may be empty or absent if a platform failed to build, so the asset list is
+        # built from what actually arrived rather than a glob that would break the release.
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          files=$(find dist -type f | sort | tr '\n' ' ')
+          echo "found: ${files:-<none>}"
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub release
         # --notes-from-tag uses the annotated tag's own message as the release body, so the
         # notes written when the tag was created (see justfile's `release` recipe) carry through
@@ -47,5 +162,6 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             "${{ steps.jar.outputs.path }}" \
             "${{ steps.jar.outputs.sha256 }}" \
+            ${{ steps.native.outputs.files }} \
             --title "${{ github.ref_name }}" \
             --notes-from-tag
