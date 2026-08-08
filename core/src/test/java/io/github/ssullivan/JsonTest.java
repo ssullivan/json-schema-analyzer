@@ -20,6 +20,6 @@ class JsonTest {
                 ObjectType.of("b", ScalarType.STRING)
         ));
 
-        assertEquals("\"object|string\"", Json.MAPPER.writeValueAsString(union));
+        assertEquals("\"object|string\"", Json.write(union));
     }
 }

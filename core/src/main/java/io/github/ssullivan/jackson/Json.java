@@ -1,6 +1,7 @@
 package io.github.ssullivan.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -16,12 +17,31 @@ import java.util.stream.Collectors;
  * Renders a {@link JsonType} shape as this project's compact notation: scalar types print as
  * their name ({@code "string"}, {@code "integer"}, ...), a {@link UnionType} prints as its
  * members joined with {@code |} (e.g. {@code "integer|string"}), and an {@link ObjectType}'s
- * optional fields get a {@code ?} suffix on the key (e.g. {@code "email?"}). {@link #MAPPER} is
- * a shared, pre-configured {@code ObjectMapper} — safe to reuse across threads, per Jackson's own
- * {@code ObjectMapper} contract, since it's never reconfigured after construction.
+ * optional fields get a {@code ?} suffix on the key (e.g. {@code "email?"}).
+ * <p>
+ * Rendering goes through {@link #write(Object)}. The underlying {@code ObjectMapper} is kept
+ * private deliberately: it is shared across every call, and Jackson's thread-safety guarantee
+ * holds only while a mapper is never reconfigured after construction — so nothing outside this
+ * class is given the chance to reconfigure it.
  */
 public final class Json {
-    public static final ObjectMapper MAPPER = configureObjectMapper();
+    private static final ObjectMapper MAPPER = configureObjectMapper();
+
+    private Json() {
+    }
+
+    /**
+     * Renders a value using this project's compact notation.
+     *
+     * @param value a {@link io.github.ssullivan.types.JsonType} shape, or any other value the
+     *              shared mapper can serialize (the CLI also passes the {@code ObjectNode}
+     *              produced by {@link JsonSchemaWriter})
+     * @return the rendered JSON
+     * @throws JsonProcessingException if the value cannot be serialized
+     */
+    public static String write(Object value) throws JsonProcessingException {
+        return MAPPER.writeValueAsString(value);
+    }
 
     private static ObjectMapper configureObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();

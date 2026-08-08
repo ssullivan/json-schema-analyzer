@@ -86,7 +86,7 @@ public class Main {
                 System.out.println(LlmWriter.write(result));
             } else {
                 Object output = command.jsonSchema ? JsonSchemaWriter.toJsonSchema(result) : result;
-                System.out.println(Json.MAPPER.writeValueAsString(output));
+                System.out.println(Json.write(output));
             }
         }
 
