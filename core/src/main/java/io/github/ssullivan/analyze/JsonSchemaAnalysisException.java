@@ -11,6 +11,8 @@ import com.fasterxml.jackson.core.JsonToken;
  * with their input.
  */
 public final class JsonSchemaAnalysisException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
     private JsonSchemaAnalysisException(String message) {
         super(message);
     }

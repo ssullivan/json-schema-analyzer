@@ -41,6 +41,12 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!--
+          Makes builds reproducible: jar entries get this fixed timestamp instead of the
+          wall-clock build time, so the same commit always produces byte-identical artifacts.
+          Bump it when cutting a release (`mvn versions:set` does not touch it).
+        -->
+        <project.build.outputTimestamp>2026-08-08T00:00:00Z</project.build.outputTimestamp>
         <java.version>17</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
@@ -94,6 +100,17 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.15.0</version>
+                    <configuration>
+                        <!--
+                          Surface compiler warnings during an ordinary build. Deliberately not
+                          -Werror: a future JDK adding a lint category would break the build.
+                        -->
+                        <showWarnings>true</showWarnings>
+                        <showDeprecation>true</showDeprecation>
+                        <compilerArgs>
+                            <arg>-Xlint:all</arg>
+                        </compilerArgs>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -114,6 +131,11 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-install-plugin</artifactId>
                     <version>3.1.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>3.5.6</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -164,7 +186,11 @@
                         <artifactId>maven-javadoc-plugin</artifactId>
                         <version>3.12.0</version>
                         <configuration>
-                            <additionalJOption>-Xdoclint:none</additionalJOption>
+                            <!--
+                              Javadoc is the documentation consumers read on Maven Central, so
+                              hold it to the full doclint checks rather than silencing them.
+                            -->
+                            <additionalJOption>-Xdoclint:all</additionalJOption>
                         </configuration>
                         <executions>
                             <execution>
