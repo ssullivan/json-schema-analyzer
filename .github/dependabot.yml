@@ -9,16 +9,26 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
-      # One PR per ecosystem rather than one per artifact — Jackson alone spans three.
-      maven-dependencies:
-        patterns:
-          - "*"
+      # Routine updates arrive as one reviewable batch — Jackson alone spans three artifacts.
+      maven-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+      # Majors stay isolated: they need independent review and revert, and bundling one in
+      # would block every safe update behind it if it breaks the build.
+      maven-major:
+        update-types:
+          - major
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     groups:
-      github-actions:
-        patterns:
-          - "*"
+      github-actions-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+      github-actions-major:
+        update-types:
+          - major
