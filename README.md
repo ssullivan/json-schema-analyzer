@@ -3,11 +3,59 @@ json-schema-explorer
 
 [![Java CI with Maven](https://github.com/ssullivan/json-schema-analyzer/actions/workflows/maven.yml/badge.svg)](https://github.com/ssullivan/json-schema-analyzer/actions/workflows/maven.yml)
 
-A small command line utility to understand the fields, and datatypes in a JSON document. Beyond
-plain output and JSON Schema, it can also emit a punctuation-free notation built to be pasted
-into an LLM prompt cheaply — see [Example6](#example6-llm-optimized-output).
+Understand the fields and datatypes in a JSON document without reading the whole thing.
+
+Point it at an API response or a data export and it prints the *shape* — field names, types,
+which fields are optional, how they nest — as plain output, as a JSON Schema draft-07 document,
+or in a compact notation built to be pasted into an LLM prompt cheaply.
+
+## Why this one
+
+Most JSON shape tools target code generation or JSON Schema. This one also targets **context
+windows**. On the merged-samples example below, describing the same data costs:
+
+| Output | Bytes |
+| --- | --- |
+| `-l` compact notation | **52** |
+| default notation | 79 |
+| `-s` JSON Schema draft-07 | 301 |
+| the raw JSON itself | 157 |
+
+A sixth the size of JSON Schema, and a third the size of the raw data — which matters when the
+shape is going into a prompt rather than a parser. It also ships as an
+[Agent Skill](#agent-skills), so coding agents can use it without being told it exists.
+
+## Install
+
+Download a binary for your platform from the
+[latest release](https://github.com/ssullivan/json-schema-analyzer/releases/latest) — no Java
+required:
+
+```shell
+# macOS (Apple silicon) — adjust the platform for linux-x64, darwin-x64, or windows-x64
+curl -sSLo json-analyze \
+  https://github.com/ssullivan/json-schema-analyzer/releases/latest/download/json-analyze-<version>-darwin-arm64
+chmod +x json-analyze
+./json-analyze --help
+```
+
+Every binary ships with a `.sha256` next to it, so you can verify what you downloaded:
+
+```shell
+curl -sSLO https://github.com/ssullivan/json-schema-analyzer/releases/latest/download/json-analyze-<version>-darwin-arm64.sha256
+sha256sum -c json-analyze-<version>-darwin-arm64.sha256
+```
+
+Prefer the JVM, or want the library? The runnable jar is attached to the same release and needs
+a JDK 17+:
+
+```shell
+java -jar json-schema-explorer-<version>.jar -i example.json
+```
 
 ## Contents
+* [Why this one](#why-this-one)
+* [Install](#install)
 * [Requirements](#requirements)
 * [Build](#build)
 * [CLI](#cli)
@@ -37,6 +85,14 @@ This is a two-module Maven project:
 
 builds both modules and produces the executable CLI JAR at
 `cli/target/json-schema-explorer-<version>.jar`.
+
+To build a native binary yourself, use a [GraalVM](https://www.graalvm.org/) JDK and activate the
+`native` profile — this is what CI runs per platform to produce the released binaries:
+
+```shell
+./mvnw package -P native -DskipTests
+./cli/target/json-analyze --version
+```
 
 ## CLI 
 ```shell
