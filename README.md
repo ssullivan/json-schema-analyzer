@@ -12,18 +12,30 @@ or in a compact notation built to be pasted into an LLM prompt cheaply.
 ## Why this one
 
 Most JSON shape tools target code generation or JSON Schema. This one also targets **context
-windows**. On the merged-samples example below, describing the same data costs:
+windows**: the size of a description depends on the document's *shape*, not on how much data it
+holds. Feed it 10,000× more records and the answer doesn't get bigger.
 
-| Output | Bytes |
-| --- | --- |
-| `-l` compact notation | **52** |
-| default notation | 79 |
-| `-s` JSON Schema draft-07 | 301 |
-| the raw JSON itself | 157 |
+| Records in | Input size | `-l` output | Output ÷ input |
+| --- | --- | --- | --- |
+| 10 | 1.7 KB | 155 B | 9.1% |
+| 1,000 | 176.6 KB | 155 B | 0.086% |
+| 100,000 | **17.5 MB** | **155 B** | **0.0008%** |
 
-A sixth the size of JSON Schema, and a third the size of the raw data — which matters when the
-shape is going into a prompt rather than a parser. It also ships as an
-[Agent Skill](#agent-skills), so coding agents can use it without being told it exists.
+Byte-identical at every size — a 17.5 MB API dump described in 155 bytes, in 390 ms. That's what
+makes it usable in a prompt: cost is bounded by the schema, not the payload.
+
+For comparison, `quicktype --lang schema` over the same inputs produces 2,299 B at 10 records and
+**grows to 2,546 B** at 1,000, because it accumulates detail from the data as it goes.
+
+Worth knowing the honest edge case: on a small, deeply irregular document, `-s` JSON Schema output
+came out *larger than the raw JSON itself* (15.6 KB vs 9.4 KB), while `-l` was 252 B. Schema
+formats aren't built to be compact; that's the gap this fills.
+
+Numbers from [`bench/benchmark.py`](bench/benchmark.py) — run `just bench` to reproduce them, or
+`just bench --with-quicktype` to include the comparison.
+
+It also ships as an [Agent Skill](#agent-skills), so coding agents can use it without being told
+it exists.
 
 ## Install
 
@@ -327,9 +339,8 @@ Pass `-l`/`--llm` to print the shape in a compact notation with no braces, quote
 nesting is indentation only, array-typed fields get a trailing `[]`, and optional/union fields
 keep the same `?`/`|` markers as the default compact notation. It composes with `-m` the same way
 `-s` does. This isn't meant to be parsed back; it's meant to describe a JSON shape to an LLM
-(e.g. in a system prompt) using as few tokens as possible — on the merged-samples example above,
-`-l` output is roughly a third the size of the default compact notation and a sixth the size of
-`-s`'s JSON Schema.
+(e.g. in a system prompt) using as few tokens as possible — see [Why this one](#why-this-one) for
+measured sizes against the other modes.
 
 ```shell
 java -jar json-schema-analyzer-<version>.jar -i example.json -l
