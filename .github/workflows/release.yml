@@ -108,7 +108,7 @@ jobs:
             shasum -a 256 "$name" > "$name.sha256"
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.platform }}
           path: dist/*
@@ -145,7 +145,7 @@ jobs:
           echo "sha256=$jar.sha256" >> "$GITHUB_OUTPUT"
 
       - name: Collect native binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: native-*
           path: dist
