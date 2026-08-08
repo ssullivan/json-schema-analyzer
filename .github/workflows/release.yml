@@ -36,7 +36,11 @@ jobs:
       - name: Set up GraalVM
         uses: graalvm/setup-graalvm@v1
         with:
-          java-version: '21'
+          # Must stay current: native-maven-plugin emits a reachability-metadata schema that
+          # older GraalVM releases reject outright ("provides a reachability-metadata schema,
+          # but your GraalVM installation does not"). 21.0.2 failed on every platform.
+          # Building on 25 is fine — the project targets Java 17 bytecode regardless.
+          java-version: '25'
           distribution: 'graalvm-community'
           cache: maven
           github-token: ${{ secrets.GITHUB_TOKEN }}
