@@ -175,12 +175,15 @@ class MainTest {
     }
 
     @Test
-    void testVersionProviderFallsBackWhenNoManifestIsPresent() {
-        // Tests run from target/classes, where there is no jar manifest to read.
+    void testVersionProviderReadsTheFilteredResource() {
+        // Reads a build-filtered classpath resource rather than the jar manifest, so this works
+        // from target/classes too — and, more to the point, inside a native binary, which has no
+        // manifest at all.
         String[] version = new Main.VersionProvider().getVersion();
 
         assertEquals(1, version.length);
-        assertTrue(version[0].startsWith("json-analyze "));
+        assertTrue(version[0].startsWith("json-analyze "), version[0]);
+        assertFalse(version[0].endsWith("dev"), "expected a real version, not the fallback: " + version[0]);
     }
 
     @Test

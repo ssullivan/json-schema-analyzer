@@ -30,10 +30,63 @@
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
         </dependency>
+        <!--
+          Annotation processor only. Generates META-INF/native-image/picocli-generated/
+          reflect-config.json at compile time, so picocli's own reflection over @Command and
+          @Option needs no hand-written native-image configuration.
+        -->
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli-codegen</artifactId>
+            <version>${picocli.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
+        <resources>
+            <!--
+              version.properties is filtered so Main.VersionProvider can report the build's
+              version from the classpath. A native binary has no jar manifest, so reading
+              Implementation-Version would report "dev" there; a resource works in both.
+            -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>io/github/ssullivan/version.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>io/github/ssullivan/version.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
+            <!--
+              Annotation processing is off by default on JDK 23+, so picocli-codegen has to be
+              named explicitly here or it silently emits no native-image config at all.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>info.picocli</groupId>
+                            <artifactId>picocli-codegen</artifactId>
+                            <version>${picocli.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-Xlint:all</arg>
+                        <arg>-Aproject=${project.groupId}/${project.artifactId}</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
             <!--
               ShadedJarIT runs the packaged jar as a subprocess, so it has to run after
               `package` — surefire runs before it and would always find no jar.
@@ -70,7 +123,9 @@
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>${start-class}</mainClass>
-                                    <!-- Read back by Main.VersionProvider to report the version. -->
+                                    <!-- Standard jar metadata. Note the version flag does NOT
+                                         read this: it uses a filtered resource, which also works
+                                         in the native binary, where there is no manifest. -->
                                     <manifestEntries>
                                         <Implementation-Version>${project.version}</Implementation-Version>
                                     </manifestEntries>
@@ -82,5 +137,49 @@
             </plugin>
         </plugins>
     </build>
+
+    <!--
+      Activate with `./mvnw package -P native` on a GraalVM JDK. Kept in a profile so ordinary
+      builds and the JDK matrix are untouched — native-image is slow and needs GraalVM.
+    -->
+    <profiles>
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>1.1.8</version>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>build-native</id>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                                <phase>package</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <imageName>json-analyze</imageName>
+                            <mainClass>${start-class}</mainClass>
+                            <!--
+                              Pulls community-maintained native-image config for third-party
+                              libraries (Jackson in particular) instead of hand-maintaining it.
+                            -->
+                            <metadataRepository>
+                                <enabled>true</enabled>
+                            </metadataRepository>
+                            <buildArgs>
+                                <buildArg>--no-fallback</buildArg>
+                                <buildArg>-H:IncludeResources=io/github/ssullivan/version\.properties</buildArg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

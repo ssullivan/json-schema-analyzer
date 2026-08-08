@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Properties;
 import java.util.concurrent.Callable;
 
 /**
@@ -24,15 +25,31 @@ public final class Main {
     }
 
     /**
-     * Reports the version stamped into the shaded jar's manifest, so {@code --version} can't
-     * drift out of sync with the POM. Falls back to {@code dev} when running from
-     * {@code target/classes}, where there is no manifest to read.
+     * Reports the version from a build-filtered classpath resource, so {@code --version} can't
+     * drift out of sync with the POM. A resource rather than the jar manifest because a native
+     * binary has no manifest — reading {@code Implementation-Version} would report {@code dev}
+     * there. Falls back to {@code dev} only if the resource is genuinely missing.
      */
     static class VersionProvider implements CommandLine.IVersionProvider {
+        private static final String RESOURCE = "/io/github/ssullivan/version.properties";
+
         @Override
         public String[] getVersion() {
-            String version = Main.class.getPackage().getImplementationVersion();
-            return new String[]{"json-analyze " + (version != null ? version : "dev")};
+            return new String[]{"json-analyze " + readVersion()};
+        }
+
+        private static String readVersion() {
+            try (InputStream in = Main.class.getResourceAsStream(RESOURCE)) {
+                if (in == null) {
+                    return "dev";
+                }
+                Properties properties = new Properties();
+                properties.load(in);
+                String version = properties.getProperty("version");
+                return version == null || version.isBlank() ? "dev" : version;
+            } catch (IOException e) {
+                return "dev";
+            }
         }
     }
 
