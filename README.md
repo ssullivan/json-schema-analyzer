@@ -27,7 +27,14 @@ shape is going into a prompt rather than a parser. It also ships as an
 
 ## Install
 
-Download a binary for your platform from the
+On macOS or Linux, via Homebrew — no Java required:
+
+```shell
+brew tap ssullivan/tap
+brew install json-analyze
+```
+
+Or download a binary for your platform from the
 [latest release](https://github.com/ssullivan/json-schema-analyzer/releases/latest) — no Java
 required:
 
