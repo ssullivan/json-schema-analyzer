@@ -1,4 +1,4 @@
-json-schema-explorer
+json-schema-analyzer
 ---
 
 [![Java CI with Maven](https://github.com/ssullivan/json-schema-analyzer/actions/workflows/maven.yml/badge.svg)](https://github.com/ssullivan/json-schema-analyzer/actions/workflows/maven.yml)
@@ -57,7 +57,7 @@ Prefer the JVM, or want the library? The runnable jar is attached to the same re
 a JDK 17+:
 
 ```shell
-java -jar json-schema-explorer-<version>.jar -i example.json
+java -jar json-schema-analyzer-<version>.jar -i example.json
 ```
 
 ## Contents
@@ -82,8 +82,8 @@ java -jar json-schema-explorer-<version>.jar -i example.json
 ## Build
 
 This is a two-module Maven project:
-* `core` — the schema-inference library (`json-schema-explorer-core`), no CLI dependencies.
-* `cli` — the command line tool (`json-schema-explorer`), depends on `core` and packages an
+* `core` — the schema-inference library (`json-schema-analyzer-core`), no CLI dependencies.
+* `cli` — the command line tool (`json-schema-analyzer`), depends on `core` and packages an
   executable fat JAR via the maven-shade-plugin.
 
 ```shell
@@ -91,7 +91,7 @@ This is a two-module Maven project:
 ```
 
 builds both modules and produces the executable CLI JAR at
-`cli/target/json-schema-explorer-<version>.jar`.
+`cli/target/json-schema-analyzer-<version>.jar`.
 
 To build a native binary yourself, use a [GraalVM](https://www.graalvm.org/) JDK and activate the
 `native` profile — this is what CI runs per platform to produce the released binaries:
@@ -121,7 +121,7 @@ Describes the fields and datatypes in a JSON document.
 `-i` is optional — omit it to pipe JSON in from stdin instead:
 
 ```shell
-curl -s https://api.example.com/users | java -jar json-schema-explorer-<version>.jar
+curl -s https://api.example.com/users | java -jar json-schema-analyzer-<version>.jar
 ```
 
 ## Examples
@@ -141,7 +141,7 @@ cat <<EOF >example.json
   }
 }
 EOF
-java -jar json-schema-explorer-<version>.jar -i example.json
+java -jar json-schema-analyzer-<version>.jar -i example.json
 ```
 
 would produce the following output
@@ -176,7 +176,7 @@ cat <<EOF >example.json
   }
 }]
 EOF
-java -jar json-schema-explorer-<version>.jar -i example.json
+java -jar json-schema-analyzer-<version>.jar -i example.json
 ```
 
 would produce the following output
@@ -207,7 +207,7 @@ cat <<EOF >example.json
   []
 ]
 EOF
-java -jar json-schema-explorer-<version>.jar -i example.json
+java -jar json-schema-analyzer-<version>.jar -i example.json
 ```
 
 would produce the following output
@@ -233,7 +233,7 @@ cat <<EOF >samples.json
   {"id": "4", "name": "Dave", "email": "d@example.com"}
 ]
 EOF
-java -jar json-schema-explorer-<version>.jar -i samples.json -m
+java -jar json-schema-analyzer-<version>.jar -i samples.json -m
 ```
 
 would produce the following output
@@ -256,7 +256,7 @@ cat <<EOF >nested-samples.json
   {"product": {"name": "B", "weight": 1.5}}
 ]
 EOF
-java -jar json-schema-explorer-<version>.jar -i nested-samples.json -m
+java -jar json-schema-analyzer-<version>.jar -i nested-samples.json -m
 ```
 
 ```json
@@ -276,7 +276,7 @@ JSON Schema has no separate "float" keyword, so both the `float` and merged `num
 the compact notation collapse to `"number"` here.
 
 ```shell
-java -jar json-schema-explorer-<version>.jar -i example.json -s
+java -jar json-schema-analyzer-<version>.jar -i example.json -s
 ```
 
 would produce the following output
@@ -332,7 +332,7 @@ keep the same `?`/`|` markers as the default compact notation. It composes with 
 `-s`'s JSON Schema.
 
 ```shell
-java -jar json-schema-explorer-<version>.jar -i example.json -l
+java -jar json-schema-analyzer-<version>.jar -i example.json -l
 ```
 
 would produce the following output
@@ -353,25 +353,25 @@ Failures are reported as a single clean line on stderr — no stack trace — de
 expected and the exact line/column where things went wrong, then exit with a non-zero status:
 
 ```shell
-$ java -jar json-schema-explorer-<version>.jar -i bad.json
+$ java -jar json-schema-analyzer-<version>.jar -i bad.json
 Error: Malformed JSON (line 2, column 1): Unexpected end-of-input within/between Object entries
 ```
 
 ```shell
-$ java -jar json-schema-explorer-<version>.jar -i missing.json
+$ java -jar json-schema-analyzer-<version>.jar -i missing.json
 Error: missing.json (No such file or directory)
 ```
 
 ## Using as a Library
 
-`json-schema-explorer-core` has no CLI dependencies — depend on it directly to infer a JSON
+`json-schema-analyzer-core` has no CLI dependencies — depend on it directly to infer a JSON
 document's shape in-process, without shelling out to the CLI:
 
 ```xml
 <dependency>
     <groupId>io.github.ssullivan</groupId>
-    <artifactId>json-schema-explorer-core</artifactId>
-    <version>1.1.0</version>
+    <artifactId>json-schema-analyzer-core</artifactId>
+    <version>1.3.0</version>
 </dependency>
 ```
 
@@ -408,7 +408,7 @@ This repo ships a [`json-shape`](.agents/skills/json-shape/SKILL.md) skill follo
 [Agent Skills](https://agentskills.io) open standard, so an AI coding agent can infer a JSON
 document's shape — using the token-cheap `-l` notation above — without knowing this tool
 exists. It resolves a jar automatically: a local Maven build if you're inside a clone,
-otherwise the latest published release, cached under `~/.cache/json-schema-explorer/`.
+otherwise the latest published release, cached under `~/.cache/json-schema-analyzer/`.
 
 OpenCode, Gemini CLI, and Antigravity read `.agents/skills/` natively, so the skill works as
 soon as the repo is checked out. Claude Code reads `.claude/skills/` instead, which this repo
@@ -422,7 +422,7 @@ ln -s ../../.agents/skills/json-shape .claude/skills/json-shape
 
 This project follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
 
-* **MAJOR** — a breaking change to `json-schema-explorer-core`'s public API (removing or
+* **MAJOR** — a breaking change to `json-schema-analyzer-core`'s public API (removing or
   renaming a public class/method, changing a method signature, changing what `JsonType`
   permits) or to the CLI's flags/output format.
 * **MINOR** — new backward-compatible functionality: a new CLI flag, a new public method, a new

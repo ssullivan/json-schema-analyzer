@@ -45,7 +45,7 @@ public final class JsonSchemaAnalysisException extends RuntimeException {
         return new JsonSchemaAnalysisException(String.format(
                 "Unexpected token %s (line %d, column %d): not a string, number, boolean, or "
                         + "null. This shouldn't be reachable when parsing plain JSON text — "
-                        + "if you're seeing this, it likely indicates a bug in json-schema-explorer "
+                        + "if you're seeing this, it likely indicates a bug in json-schema-analyzer "
                         + "itself, not a problem with your input.",
                 token, location.getLineNr(), location.getColumnNr()));
     }

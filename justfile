@@ -13,7 +13,7 @@ test:
 run *args:
     #!/usr/bin/env bash
     set -euo pipefail
-    jar=$(ls cli/target/json-schema-explorer-*.jar | grep -v -e sources -e javadoc -e original | head -1)
+    jar=$(ls cli/target/json-schema-analyzer-*.jar | grep -v -e sources -e javadoc -e original | head -1)
     if [ -z "$jar" ]; then
         echo "No CLI jar found — run 'just build' first" >&2
         exit 1

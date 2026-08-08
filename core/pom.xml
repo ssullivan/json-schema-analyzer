@@ -4,14 +4,14 @@
 
     <parent>
         <groupId>io.github.ssullivan</groupId>
-        <artifactId>json-schema-explorer-parent</artifactId>
+        <artifactId>json-schema-analyzer-parent</artifactId>
         <version>1.2.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>json-schema-explorer-core</artifactId>
+    <artifactId>json-schema-analyzer-core</artifactId>
     <packaging>jar</packaging>
 
-    <name>json-schema-explorer-core</name>
+    <name>json-schema-analyzer-core</name>
     <description>Library for inferring the shape (fields, types, optionality) of sample JSON data. No CLI dependencies.</description>
 
     <dependencies>

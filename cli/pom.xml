@@ -4,26 +4,26 @@
 
     <parent>
         <groupId>io.github.ssullivan</groupId>
-        <artifactId>json-schema-explorer-parent</artifactId>
+        <artifactId>json-schema-analyzer-parent</artifactId>
         <version>1.2.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>json-schema-explorer</artifactId>
+    <artifactId>json-schema-analyzer</artifactId>
     <packaging>jar</packaging>
 
-    <name>json-schema-explorer</name>
+    <name>json-schema-analyzer</name>
     <description>Command line utility to understand the fields, and datatypes in a JSON document.</description>
 
     <properties>
         <start-class>io.github.ssullivan.Main</start-class>
-        <!-- Only json-schema-explorer-core is published to Maven Central; this is the CLI app. -->
+        <!-- Only json-schema-analyzer-core is published to Maven Central; this is the CLI app. -->
         <maven.deploy.skip>true</maven.deploy.skip>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>io.github.ssullivan</groupId>
-            <artifactId>json-schema-explorer-core</artifactId>
+            <artifactId>json-schema-analyzer-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

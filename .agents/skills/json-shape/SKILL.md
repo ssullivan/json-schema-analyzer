@@ -1,8 +1,8 @@
 ---
 name: json-shape
-description: Summarizes the fields, types, optionality, and nesting of a JSON document by running the json-schema-explorer CLI, using a compact notation that costs a fraction of the tokens of the raw JSON. Use before writing code against an unfamiliar JSON payload — an API response, a config file, a sample data export — or whenever you need a document's structure without spending context on its contents. Can also emit a real JSON Schema (draft-07) document when one is explicitly needed.
+description: Summarizes the fields, types, optionality, and nesting of a JSON document by running the json-schema-analyzer CLI, using a compact notation that costs a fraction of the tokens of the raw JSON. Use before writing code against an unfamiliar JSON payload — an API response, a config file, a sample data export — or whenever you need a document's structure without spending context on its contents. Can also emit a real JSON Schema (draft-07) document when one is explicitly needed.
 license: Apache-2.0
-compatibility: Requires bash and a JRE 17+ on PATH. Uses a local Maven build (cli/target/json-schema-explorer-*.jar) when run inside a clone of this repo; otherwise requires curl and network access to fetch a released jar from GitHub. No native Windows cmd/PowerShell support — use WSL or Git Bash.
+compatibility: Requires bash and a JRE 17+ on PATH. Uses a local Maven build (cli/target/json-schema-analyzer-*.jar) when run inside a clone of this repo; otherwise requires curl and network access to fetch a released jar from GitHub. No native Windows cmd/PowerShell support — use WSL or Git Bash.
 ---
 
 # JSON shape analysis
@@ -91,8 +91,8 @@ Output" section.
 Needs `java` (17+) on PATH, plus `curl` when no local build is available.
 
 The script prefers a locally-built jar, searching upward from the current directory for
-`cli/target/json-schema-explorer-*.jar`. Outside a clone of the repo it downloads the latest
-released jar to `~/.cache/json-schema-explorer/` (override with `JSON_SCHEMA_EXPLORER_CACHE`)
+`cli/target/json-schema-analyzer-*.jar`. Outside a clone of the repo it downloads the latest
+released jar to `~/.cache/json-schema-analyzer/` (override with `JSON_SCHEMA_ANALYZER_CACHE`)
 and reuses it on later runs.
 
 If you see `Unknown option: '-l'` (or `-m`/`-s`), the jar being used predates that flag —

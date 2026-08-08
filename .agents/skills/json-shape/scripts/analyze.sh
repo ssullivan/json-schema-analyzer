@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Thin wrapper around the json-schema-explorer CLI. Resolves a jar — preferring a local
+# Thin wrapper around the json-schema-analyzer CLI. Resolves a jar — preferring a local
 # Maven build, falling back to the latest published GitHub release — then forwards every
 # argument through untouched. Deliberately has no opinion about which flags to pass; see
 # SKILL.md for that.
 set -euo pipefail
 
 REPO_SLUG="ssullivan/json-schema-analyzer"
-CACHE_DIR="${JSON_SCHEMA_EXPLORER_CACHE:-$HOME/.cache/json-schema-explorer}"
+CACHE_DIR="${JSON_SCHEMA_ANALYZER_CACHE:-$HOME/.cache/json-schema-analyzer}"
 
 # Walk up from the current directory looking for a built jar, so this still works when the
 # agent has cd'd into a subdirectory of a clone. Mirrors the justfile's `run` recipe.
@@ -15,7 +15,7 @@ find_local_jar() {
     dir=$(pwd -P)
     while [ "$dir" != "/" ]; do
         if [ -d "$dir/cli/target" ]; then
-            jar=$(ls "$dir"/cli/target/json-schema-explorer-*.jar 2>/dev/null \
+            jar=$(ls "$dir"/cli/target/json-schema-analyzer-*.jar 2>/dev/null \
                   | grep -v -e sources -e javadoc -e original | head -1 || true)
             if [ -n "$jar" ]; then
                 printf '%s\n' "$jar"

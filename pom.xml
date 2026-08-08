@@ -3,12 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.ssullivan</groupId>
-    <artifactId>json-schema-explorer-parent</artifactId>
+    <artifactId>json-schema-analyzer-parent</artifactId>
     <version>1.2.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>json-schema-explorer-parent</name>
-    <description>Parent POM for json-schema-explorer: a library and CLI for inferring the shape of sample JSON data.</description>
+    <name>json-schema-analyzer-parent</name>
+    <description>Parent POM for json-schema-analyzer: a library and CLI for inferring the shape of sample JSON data.</description>
     <url>https://github.com/ssullivan/json-schema-analyzer</url>
 
     <licenses>

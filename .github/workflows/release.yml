@@ -135,7 +135,7 @@ jobs:
         # The checksum is written with the bare filename (not the cli/target/... path) so that
         # `sha256sum -c` verifies correctly from whatever directory a consumer downloads into.
         run: |
-          jar=$(ls cli/target/json-schema-explorer-*.jar | grep -v -e sources -e javadoc -e original)
+          jar=$(ls cli/target/json-schema-analyzer-*.jar | grep -v -e sources -e javadoc -e original)
           (cd "$(dirname "$jar")" && sha256sum "$(basename "$jar")" > "$(basename "$jar").sha256")
           echo "path=$jar" >> "$GITHUB_OUTPUT"
           echo "sha256=$jar.sha256" >> "$GITHUB_OUTPUT"

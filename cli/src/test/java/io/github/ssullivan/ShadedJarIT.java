@@ -17,11 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Runs the shaded jar as a real subprocess. The other tests all run from {@code target/classes},
- * where there is no manifest — so nothing else covers the parts of the build that only exist in
- * the packaged artifact: the {@code Main-Class} entry that makes {@code java -jar} work at all,
- * and the {@code Implementation-Version} that {@code --version} reports. Both could break
- * silently while every unit test still passed.
+ * Runs the shaded jar as a real subprocess, covering the parts of the build that only exist once
+ * packaged: the {@code Main-Class} entry that makes {@code java -jar} work at all, and the
+ * filtered {@code version.properties} resource surviving into the shaded artifact. Either could
+ * break silently while every unit test still passed.
  * <p>
  * Skips rather than fails when the jar hasn't been packaged yet, so {@code mvn test} (which runs
  * before {@code package}) stays green; {@code mvn verify} is what actually exercises this.
@@ -40,7 +39,7 @@ class ShadedJarIT {
             jar = entries
                     .filter(p -> {
                         String name = p.getFileName().toString();
-                        return name.startsWith("json-schema-explorer-")
+                        return name.startsWith("json-schema-analyzer-")
                                 && name.endsWith(".jar")
                                 && !name.contains("sources")
                                 && !name.contains("javadoc")
@@ -52,9 +51,9 @@ class ShadedJarIT {
     }
 
     @Test
-    void testVersionReportsTheRealVersionFromTheManifest() throws Exception {
-        // The VersionProvider unit test only ever sees the "dev" fallback, because it runs
-        // without a manifest. This is the one place the real manifest wiring is checked.
+    void testVersionReportsTheRealVersionFromThePackagedResource() throws Exception {
+        // Shading rewrites the jar's contents, so this is where a lost or unfiltered
+        // version.properties would show up — as a "dev" fallback instead of a real version.
         Result result = run("--version");
 
         assertEquals(0, result.exitCode(), result.output());
@@ -82,7 +81,7 @@ class ShadedJarIT {
     /** Derived from the jar's filename, which the build stamps with the project version. */
     private static String expectedVersion() {
         String name = jar.getFileName().toString();
-        return name.substring("json-schema-explorer-".length(), name.length() - ".jar".length());
+        return name.substring("json-schema-analyzer-".length(), name.length() - ".jar".length());
     }
 
     private static Result run(String... args) throws Exception {
