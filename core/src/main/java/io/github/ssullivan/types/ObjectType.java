@@ -14,6 +14,13 @@ import java.util.stream.Collectors;
  * {@link io.github.ssullivan.analyze.SchemaMerger}). A freshly-parsed object from a single
  * document has no optional fields; optionality only appears once shapes have been merged.
  * Fields are kept in sorted-by-name order for deterministic output.
+ * <p>
+ * <strong>Do not mutate an instance after adding it to another type.</strong> {@code equals}
+ * and {@code hashCode} are derived from the fields, and {@link ArrayType}/{@link UnionType}
+ * store their members in hash-based sets — so calling {@link #addField} or
+ * {@link #markOptional} on an already-stored instance leaves it unfindable in the set that
+ * contains it. Finish building a shape first, then add it. Everything this library returns is
+ * built that way; the hazard only applies to types you assemble yourself.
  */
 public final class ObjectType implements JsonType {
     private final Map<String, JsonType> fields = new TreeMap<>();

@@ -1,6 +1,8 @@
 json-schema-explorer
 ---
 
+[![Java CI with Maven](https://github.com/ssullivan/json-schema-analyzer/actions/workflows/maven.yml/badge.svg)](https://github.com/ssullivan/json-schema-analyzer/actions/workflows/maven.yml)
+
 A small command line utility to understand the fields, and datatypes in a JSON document. Beyond
 plain output and JSON Schema, it can also emit a punctuation-free notation built to be pasted
 into an LLM prompt cheaply — see [Example6](#example6-llm-optimized-output).
@@ -305,7 +307,7 @@ document's shape in-process, without shelling out to the CLI:
 <dependency>
     <groupId>io.github.ssullivan</groupId>
     <artifactId>json-schema-explorer-core</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
@@ -320,7 +322,15 @@ if (schema instanceof ObjectType objectType) {
 
 `JsonType` is a sealed interface (`ObjectType`, `ArrayType`, `ScalarType`, `UnionType`), so callers
 can pattern-match on it directly. `SchemaMerger.merge(a, b)` is available the same way for folding
-multiple samples into one shape, exactly as the CLI's `-m` flag does internally.
+multiple samples into one shape, exactly as the CLI's `-m` flag does internally. To render a shape
+the way the CLI does, use `Json.write(schema)` for the compact notation or
+`JsonSchemaWriter.toJsonSchema(schema)` for a draft-07 document.
+
+Collections returned by `getFields()`, `getOptionalFields()`, and `getMembers()` are unmodifiable
+views. If you build shapes by hand rather than getting them from `parse()`, finish building a type
+*before* adding it to another one: `equals`/`hashCode` are derived from a type's contents, and
+`ArrayType`/`UnionType` hold their members in hash-based sets, so mutating an already-stored type
+leaves it unfindable in the set that contains it.
 
 `parse()` distinguishes two kinds of failure: a checked `IOException` if the stream itself can't
 be read (a genuine I/O error), and an unchecked `JsonSchemaAnalysisException` if the stream reads
