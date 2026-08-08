@@ -24,7 +24,10 @@ jobs:
             platform: linux-x64
           - os: macos-latest
             platform: darwin-arm64
-          - os: macos-13
+          # macos-13 was retired; macos-15-intel is the replacement x86_64 standard runner.
+          # Apple has discontinued x86_64, and GitHub drops it after macOS 15 retires in 2027,
+          # so this leg has a known end date — Intel Mac users can fall back to the jar.
+          - os: macos-15-intel
             platform: darwin-x64
           - os: windows-latest
             platform: windows-x64
