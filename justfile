@@ -20,6 +20,10 @@ run *args:
     fi
     java -jar "$jar" {{args}}
 
+# Measure output size against input size, e.g. `just bench` or `just bench --with-quicktype`
+bench *args:
+    ./bench/benchmark.py {{args}}
+
 # Remove build output
 clean:
     ./mvnw clean
