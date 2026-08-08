@@ -16,17 +16,36 @@ import java.util.stream.Collectors;
 public final class ArrayType implements JsonType {
     private final Set<JsonType> fields = new LinkedHashSet<>();
 
+    /**
+     * Creates an array shape with no observed elements.
+     */
+    public ArrayType() {
+    }
+
+    /**
+     * Records an element shape, ignoring it if an equal shape was already observed.
+     *
+     * @param type the element shape
+     */
     public void addField(JsonType type) {
         this.fields.add(type);
     }
 
     /**
+     * Returns the element shapes observed in this array.
+     *
      * @return an unmodifiable view of the distinct element shapes, in first-appearance order
      */
     public Set<JsonType> getFields() {
         return Collections.unmodifiableSet(fields);
     }
 
+    /**
+     * Creates an array shape from the given element shapes.
+     *
+     * @param jsonTypes the element shapes; duplicates are collapsed
+     * @return the new array shape
+     */
     public static ArrayType of(JsonType... jsonTypes) {
         ArrayType retval = new ArrayType();
         Arrays.stream(jsonTypes)

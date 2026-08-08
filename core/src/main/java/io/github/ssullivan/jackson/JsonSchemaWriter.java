@@ -23,6 +23,8 @@ public final class JsonSchemaWriter {
     }
 
     /**
+     * Translates an inferred shape into a JSON Schema draft-07 document.
+     *
      * @param type a non-null shape, typically produced by {@link io.github.ssullivan.analyze.JsonSchemaAnalyzer}
      *             or {@link io.github.ssullivan.analyze.SchemaMerger}
      * @return the equivalent JSON Schema draft-07 document

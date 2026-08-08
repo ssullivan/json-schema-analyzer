@@ -16,6 +16,10 @@ import java.util.Objects;
 public class JsonSchemaAnalyzer {
     private static final JsonFactory JSON_FACTORY = new JsonFactory();
 
+    /**
+     * Creates an analyzer. Instances hold no state, so one can be reused across documents and
+     * shared between threads.
+     */
     public JsonSchemaAnalyzer() {
 
     }

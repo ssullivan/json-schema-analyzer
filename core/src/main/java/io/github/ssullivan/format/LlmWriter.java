@@ -23,6 +23,8 @@ public final class LlmWriter {
     }
 
     /**
+     * Renders a shape in this class's compact, indentation-based notation.
+     *
      * @param type a non-null shape, typically produced by
      *             {@link io.github.ssullivan.analyze.JsonSchemaAnalyzer} or
      *             {@link io.github.ssullivan.analyze.SchemaMerger}

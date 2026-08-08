@@ -26,26 +26,53 @@ public final class ObjectType implements JsonType {
     private final Map<String, JsonType> fields = new TreeMap<>();
     private final Set<String> optionalFields = new TreeSet<>();
 
+    /**
+     * Creates an object shape with no fields.
+     */
+    public ObjectType() {
+    }
+
+    /**
+     * Adds a field, replacing any shape already recorded under {@code name}.
+     *
+     * @param name the field name
+     * @param type the shape observed for that field
+     */
     public void addField(String name, JsonType type) {
         this.fields.put(name, type);
     }
 
     /**
+     * Returns the fields of this object.
+     *
      * @return an unmodifiable view of the fields, in sorted-by-name order
      */
     public Map<String, JsonType> getFields() {
         return Collections.unmodifiableMap(fields);
     }
 
+    /**
+     * Records that a field is absent from at least one merged sample.
+     *
+     * @param name the field name
+     */
     public void markOptional(String name) {
         this.optionalFields.add(name);
     }
 
+    /**
+     * Reports whether a field was absent from at least one merged sample.
+     *
+     * @param name the field name
+     * @return {@code true} if the field is optional
+     */
     public boolean isOptional(String name) {
         return this.optionalFields.contains(name);
     }
 
     /**
+     * Returns the optional fields of this object.
+     *
      * @return an unmodifiable view of the optional field names
      */
     public Set<String> getOptionalFields() {
@@ -60,6 +87,13 @@ public final class ObjectType implements JsonType {
                 .collect(Collectors.joining(", ")) + " }";
     }
 
+    /**
+     * Reports whether this object holds a field of exactly the given shape.
+     *
+     * @param name the field name
+     * @param type the shape to compare against
+     * @return {@code true} if the field exists and its shape equals {@code type}
+     */
     public boolean contains(String name, JsonType type) {
         JsonType existing = fields.get(name);
         if (existing == null) {
@@ -68,6 +102,13 @@ public final class ObjectType implements JsonType {
         return Objects.equals(existing, type);
     }
 
+    /**
+     * Creates a single-field object shape.
+     *
+     * @param field the field name
+     * @param type  the shape observed for that field
+     * @return the new object shape
+     */
     public static ObjectType of(String field, JsonType type) {
         ObjectType retval = new ObjectType();
         retval.addField(field, type);

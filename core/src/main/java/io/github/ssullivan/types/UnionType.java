@@ -13,11 +13,19 @@ import java.util.stream.Collectors;
 public final class UnionType implements JsonType {
     private final Set<JsonType> members;
 
+    /**
+     * Creates a union of the given shapes. The set is copied, so later changes to
+     * {@code members} do not affect this union.
+     *
+     * @param members the distinct shapes observed in the same position
+     */
     public UnionType(Set<JsonType> members) {
         this.members = new LinkedHashSet<>(members);
     }
 
     /**
+     * Returns the shapes this union is made of.
+     *
      * @return an unmodifiable view of the union's member shapes
      */
     public Set<JsonType> getMembers() {
