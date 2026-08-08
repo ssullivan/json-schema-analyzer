@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         # --notes-from-tag below reads the annotated tag's message from the local checkout.
         # The default shallow fetch resolves the tag to a bare commit and drops the annotation,
         # which silently falls back to using the commit message as the release notes.
