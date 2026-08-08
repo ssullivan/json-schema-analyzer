@@ -19,14 +19,20 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    # The README promises JDK >= 17, so test the whole supported LTS line rather than only
+    # the minimum. Releases are still built on 17 alone (see release.yml).
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ '17', '21', '25' ]
+
     steps:
     - uses: actions/checkout@v5
-    - name: Set up JDK 17
+    - name: Set up JDK ${{ matrix.java }}
       uses: actions/setup-java@v5
       with:
-        java-version: '17'
+        java-version: ${{ matrix.java }}
         distribution: 'temurin'
         cache: maven
     - name: Build with Maven
       run: mvn clean verify --batch-mode
-    
