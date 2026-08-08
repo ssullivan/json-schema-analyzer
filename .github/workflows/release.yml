@@ -33,6 +33,10 @@ jobs:
             platform: windows-x64
 
     runs-on: ${{ matrix.os }}
+    # continue-on-error only helps once a job actually runs. A retired or unavailable runner
+    # leaves the job queued forever, which blocks the dependent release job indefinitely —
+    # exactly what macos-13 did. This turns that hang into a failure the matrix can absorb.
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v7
