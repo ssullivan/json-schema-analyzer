@@ -1,0 +1,24 @@
+version: 2
+
+updates:
+  # Jackson, picocli, and JUnit had each drifted a year or more behind before being updated
+  # by hand; these keep that from silently recurring.
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per ecosystem rather than one per artifact — Jackson alone spans three.
+      maven-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
