@@ -137,6 +137,22 @@
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>3.5.6</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>3.12.0</version>
+                    <configuration>
+                        <!--
+                          Javadoc is the documentation consumers read on Maven Central, so hold
+                          it to the full doclint checks rather than silencing them. Shared here
+                          so the ordinary build and the release profile agree — core runs this
+                          on every build, otherwise a doc regression would only surface midway
+                          through cutting a release.
+                        -->
+                        <failOnWarnings>true</failOnWarnings>
+                        <additionalJOption>-Xdoclint:all</additionalJOption>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -184,14 +200,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
-                        <version>3.12.0</version>
-                        <configuration>
-                            <!--
-                              Javadoc is the documentation consumers read on Maven Central, so
-                              hold it to the full doclint checks rather than silencing them.
-                            -->
-                            <additionalJOption>-Xdoclint:all</additionalJOption>
-                        </configuration>
                         <executions>
                             <execution>
                                 <id>attach-javadocs</id>

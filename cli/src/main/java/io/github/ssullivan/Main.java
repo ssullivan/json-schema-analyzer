@@ -14,7 +14,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.Callable;
 
-public class Main {
+/**
+ * Command line entry point. Parses the arguments with picocli, runs the analysis, and prints the
+ * resulting shape in whichever format the flags selected.
+ */
+public final class Main {
+
+    private Main() {
+    }
+
     /**
      * Reports the version stamped into the shaded jar's manifest, so {@code --version} can't
      * drift out of sync with the POM. Falls back to {@code dev} when running from
@@ -69,6 +77,12 @@ public class Main {
         }
     }
 
+    /**
+     * Runs the CLI and exits the JVM with the resulting status code.
+     *
+     * @param args the command line arguments
+     * @throws IOException if the rendered output cannot be written
+     */
     public static void main(String[] args) throws IOException {
         JsonSchemaAnalyzeCommand command = new JsonSchemaAnalyzeCommand();
         CommandLine commandLine = new CommandLine(command);
