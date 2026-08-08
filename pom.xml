@@ -4,7 +4,7 @@
 
     <groupId>io.github.ssullivan</groupId>
     <artifactId>json-schema-analyzer-parent</artifactId>
-    <version>1.2.1-SNAPSHOT</version>
+    <version>1.3.0</version>
     <packaging>pom</packaging>
 
     <name>json-schema-analyzer-parent</name>
@@ -46,7 +46,7 @@
           wall-clock build time, so the same commit always produces byte-identical artifacts.
           Bump it when cutting a release (`mvn versions:set` does not touch it).
         -->
-        <project.build.outputTimestamp>2026-08-08T02:03:18Z</project.build.outputTimestamp>
+        <project.build.outputTimestamp>2026-08-08T03:14:50Z</project.build.outputTimestamp>
         <java.version>17</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
