@@ -288,10 +288,72 @@ class JsonSchemaAnalyzerTest {
         assertEquals("disk on fire", exception.getMessage());
     }
 
+    @Test
+    void testParseJsonLinesMergesEachLineAsASample() throws IOException {
+        String ndjson = String.join("\n",
+                "{\"id\": 1, \"name\": \"Alice\", \"email\": \"a@example.com\"}",
+                "{\"id\": 2, \"name\": \"Bob\"}",
+                "{\"id\": \"3\", \"name\": \"Carol\"}");
+
+        JsonType schema = inferSchemaFromLines(ndjson);
+
+        assertInstanceOf(ObjectType.class, schema);
+        ObjectType objectType = (ObjectType) schema;
+        assertFalse(objectType.isOptional("id"));
+        assertFalse(objectType.isOptional("name"));
+        assertTrue(objectType.isOptional("email"));
+        assertInstanceOf(UnionType.class, objectType.getFields().get("id"));
+        assertEquals(
+                Set.of(ScalarType.INTEGER, ScalarType.STRING),
+                ((UnionType) objectType.getFields().get("id")).getMembers()
+        );
+    }
+
+    @Test
+    void testParseJsonLinesSkipsBlankLines() throws IOException {
+        String ndjson = "{\"id\": 1}\n\n   \n{\"id\": 2}\n";
+
+        JsonType schema = inferSchemaFromLines(ndjson);
+
+        assertEquals(ObjectType.of("id", ScalarType.INTEGER), schema);
+    }
+
+    @Test
+    void testParseJsonLinesOnSingleLineReturnsThatLinesShape() throws IOException {
+        JsonType schema = inferSchemaFromLines("{\"id\": 1}");
+
+        assertEquals(ObjectType.of("id", ScalarType.INTEGER), schema);
+    }
+
+    @Test
+    void testParseJsonLinesEmptyInputThrowsHelpfulException() {
+        JsonSchemaAnalysisException exception =
+                assertThrows(JsonSchemaAnalysisException.class, () -> inferSchemaFromLines("  \n  \n"));
+
+        assertTrue(exception.getMessage().contains("empty"));
+    }
+
+    @Test
+    void testParseJsonLinesMalformedLineReportsItsOwnLineNumber() {
+        String ndjson = "{\"id\": 1}\n{\"id\": }\n";
+
+        JsonSchemaAnalysisException exception =
+                assertThrows(JsonSchemaAnalysisException.class, () -> inferSchemaFromLines(ndjson));
+
+        assertTrue(exception.getMessage().contains("line 2"), exception.getMessage());
+    }
+
     private JsonType inferSchema(String json) throws IOException {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
             JsonSchemaAnalyzer jsonSchemaAnalyzer = new JsonSchemaAnalyzer();
             return jsonSchemaAnalyzer.parse(inputStream);
+        }
+    }
+
+    private JsonType inferSchemaFromLines(String ndjson) throws IOException {
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonSchemaAnalyzer jsonSchemaAnalyzer = new JsonSchemaAnalyzer();
+            return jsonSchemaAnalyzer.parseJsonLines(inputStream);
         }
     }
 }

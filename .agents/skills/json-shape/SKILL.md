@@ -16,8 +16,8 @@ reading the whole payload into context.
 
 - You're about to parse an API response, config file, or data export and don't know its shape.
 - A JSON file is too large or repetitive to paste, but you need its structure.
-- You have an array of sample records and want one merged shape showing which fields are
-  optional and which vary in type.
+- You have an array of sample records, or a newline-delimited JSON (NDJSON) file, and want one
+  merged shape showing which fields are optional and which vary in type.
 - You need a real JSON Schema (draft-07) document to hand to a validator or code generator.
 
 ## Usage
@@ -42,6 +42,7 @@ own — choose them using the guidance below.
 | --- | --- |
 | `-l`, `--llm` | **Default choice.** Compact, punctuation-free notation — cheapest to read. |
 | `-m`, `--merge-samples` | The input is a top-level *array of sample records* rather than one document. Folds them into a single shape: fields missing from some samples get `?`, fields whose type varies become a `\|` union. |
+| `-j`, `--jsonl` | The input is newline-delimited JSON (NDJSON) — one JSON value per line — instead of a single document or array. Merges the values the same way `-m` merges array elements; `-m` itself has no effect when `-j` is set. |
 | `-s`, `--json-schema` | Only when a real JSON Schema document is explicitly wanted. Much more verbose than `-l`. |
 | *(none)* | The default JSON-shaped compact notation. Prefer `-l` unless you specifically want valid JSON out. |
 
@@ -83,7 +84,13 @@ name: string
 Here `email` was absent from at least one record, and `id` appeared as both an integer and a
 string — the kind of detail worth knowing *before* writing the parsing code.
 
-The `-l` notation is specified in full in the project README's "Example6: LLM-Optimized
+Merging a newline-delimited JSON (NDJSON) file — no need to wrap it in `[` `]` first:
+
+```shell
+bash scripts/analyze.sh -l -j -i samples.ndjson
+```
+
+The `-l` notation is specified in full in the project README's "Example7: LLM-Optimized
 Output" section.
 
 ## Requirements and troubleshooting
@@ -95,6 +102,6 @@ The script prefers a locally-built jar, searching upward from the current direct
 released jar to `~/.cache/json-schema-analyzer/` (override with `JSON_SCHEMA_ANALYZER_CACHE`)
 and reuses it on later runs.
 
-If you see `Unknown option: '-l'` (or `-m`/`-s`), the jar being used predates that flag —
+If you see `Unknown option: '-l'` (or `-m`/`-j`/`-s`), the jar being used predates that flag —
 almost always the downloaded release rather than a local build. Building the repo locally
 (`mvn clean install`) makes the script prefer that fresh jar instead.
