@@ -393,13 +393,447 @@ class JsonSchemaAnalyzerTest {
         }
     }
 
+    @Test
+    void testEnumDetectionOffByDefaultLeavesStringsAsScalarType() throws IOException {
+        JsonType schema = inferSchema("{\"status\": \"active\"}", false, false);
+
+        assertEquals(ObjectType.of("status", ScalarType.STRING), schema);
+    }
+
+    @Test
+    void testSingleObservedValueIsNotReportedAsAnEnum() throws IOException {
+        // Only genuine variation is reported, so a field that merely happens to be constant
+        // never has its one value shown.
+        JsonType schema = inferSchema("{\"status\": \"active\"}", false, true);
+
+        assertEquals(ObjectType.of("status", ScalarType.STRING), schema);
+    }
+
+    @Test
+    void testEnumDetectionAppliesToBareArraysOfStrings() throws IOException {
+        // All elements of an array share one position, so their values pool into one enum.
+        JsonType schema = inferSchema("{\"tags\": [\"a\", \"b\", \"a\"]}", false, true);
+
+        assertEquals(ObjectType.of("tags", ArrayType.of(EnumType.of("a", "b"))), schema);
+    }
+
+    @Test
+    void testBareArrayOfStringsPastTheCapStaysPlainString() throws IOException {
+        JsonType schema = inferSchema("{\"tags\": [\"a\",\"b\",\"c\",\"d\",\"e\",\"f\"]}", false, true);
+
+        assertEquals(ObjectType.of("tags", ArrayType.of(ScalarType.STRING)), schema);
+    }
+
+    @Test
+    void testEnumDetectionAppliesInsideNestedObjects() throws IOException {
+        String ndjson = "{\"outer\":{\"status\":\"open\"}}\n{\"outer\":{\"status\":\"closed\"}}\n";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseJsonLines(inputStream);
+
+            assertEquals(
+                    ObjectType.of("outer", ObjectType.of("status", EnumType.of("open", "closed"))),
+                    schema
+            );
+        }
+    }
+
+    @Test
+    void testEnumDetectionAppliesToFieldsOfObjectsInsideAnArray() throws IOException {
+        // The limitation the previous design had to accept: values are collected per position
+        // rather than embedded in each element, so the array still dedupes to one element shape
+        // *and* the field gets its enum.
+        String json = "{\"items\": [{\"status\":\"open\"},{\"status\":\"closed\"},{\"status\":\"open\"}]}";
+
+        JsonType schema = inferSchema(json, false, true);
+
+        assertEquals(
+                ObjectType.of("items", ArrayType.of(ObjectType.of("status", EnumType.of("open", "closed")))),
+                schema
+        );
+    }
+
+    @Test
+    void testEnumDetectionAppliesToObjectsNestedDeeperInsideAnArray() throws IOException {
+        String json = "{\"items\": [{\"inner\":{\"status\":\"open\"}},{\"inner\":{\"status\":\"closed\"}}]}";
+
+        JsonType schema = inferSchema(json, false, true);
+
+        assertEquals(
+                ObjectType.of("items", ArrayType.of(
+                        ObjectType.of("inner", ObjectType.of("status", EnumType.of("open", "closed"))))),
+                schema
+        );
+    }
+
+    @Test
+    void testHeterogeneousArrayGetsNoEnumsSincePooledValuesWouldMisdescribeIt() throws IOException {
+        // A discriminated union: the two element shapes differ, so the values pooled at the
+        // shared element position don't belong to either shape individually. Stamping
+        // "click|scroll" onto both would describe records like {"type":"click","dy":2} that
+        // never occurred, so nothing under the array is substituted.
+        String json = "{\"events\":[{\"type\":\"click\",\"x\":1},{\"type\":\"scroll\",\"dy\":2}]}";
+
+        JsonType schema = inferSchema(json, false, true);
+
+        assertInstanceOf(ObjectType.class, schema);
+        ArrayType events = (ArrayType) ((ObjectType) schema).getFields().get("events");
+        assertEquals(2, events.getFields().size());
+        for (JsonType element : events.getFields()) {
+            assertEquals(ScalarType.STRING, ((ObjectType) element).getFields().get("type"));
+        }
+    }
+
+    @Test
+    void testUniformArrayStillGetsEnumsAfterTheHeterogeneousGuard() throws IOException {
+        // The guard keys off the number of distinct element shapes, so an array whose elements
+        // agree -- the case this feature is for -- is unaffected.
+        String json = "{\"events\":[{\"type\":\"click\",\"x\":1},{\"type\":\"scroll\",\"x\":2}]}";
+
+        JsonType schema = inferSchema(json, false, true);
+
+        ArrayType events = (ArrayType) ((ObjectType) schema).getFields().get("events");
+        assertEquals(1, events.getFields().size());
+        assertEquals(
+                EnumType.of("click", "scroll"),
+                ((ObjectType) events.getFields().iterator().next()).getFields().get("type")
+        );
+    }
+
+    @Test
+    void testEmptyStringValueDisqualifiesThePosition() throws IOException {
+        // Rendered, an empty value would be indistinguishable from the separator around it
+        // ("a[]: |b"), so it is not treated as an enum value.
+        JsonType schema = inferSchema("{\"a\": [\"\", \"b\"]}", false, true);
+
+        assertEquals(ObjectType.of("a", ArrayType.of(ScalarType.STRING)), schema);
+    }
+
+    @Test
+    void testWhitespacePaddedValueDisqualifiesThePosition() throws IOException {
+        JsonType schema = inferSchema("{\"a\": [\" x\", \"y\"]}", false, true);
+
+        assertEquals(ObjectType.of("a", ArrayType.of(ScalarType.STRING)), schema);
+    }
+
+    @Test
+    void testEnumDetectionAppliesAtDepthThroughMixedNesting() throws IOException {
+        // a.b[].c.d -- proves position descent is correct through both field and element steps.
+        String json = "{\"a\":{\"b\":[{\"c\":{\"d\":\"x\"}},{\"c\":{\"d\":\"y\"}}]}}";
+
+        JsonType schema = inferSchema(json, false, true);
+
+        assertEquals(
+                ObjectType.of("a", ObjectType.of("b", ArrayType.of(
+                        ObjectType.of("c", ObjectType.of("d", EnumType.of("x", "y")))))),
+                schema
+        );
+    }
+
+    @Test
+    void testArrayOfRecordsDedupesToOneElementShapeAndStillDetectsTheEnum() throws IOException {
+        // The regression this feature originally shipped with: distinct EnumTypes embedded in
+        // each record made them unequal, so a 3-record array kept 3 element shapes and the LLM
+        // notation collapsed the whole thing to a bare "object" label. Now the shape is built
+        // enum-free and values are substituted in afterwards, so both properties hold at once.
+        String json = "[{\"id\":1,\"status\":\"open\"},{\"id\":2,\"status\":\"closed\"},{\"id\":3,\"status\":\"pending\"}]";
+
+        JsonType schema = inferSchema(json, false, true);
+
+        assertInstanceOf(ArrayType.class, schema);
+        assertEquals(1, ((ArrayType) schema).getFields().size());
+
+        ObjectType expectedElement = new ObjectType();
+        expectedElement.addField("id", ScalarType.INTEGER);
+        expectedElement.addField("status", EnumType.of("open", "closed", "pending"));
+        assertEquals(ArrayType.of(expectedElement), schema);
+    }
+
+    @Test
+    void testParseSamplesMergesTopLevelArrayElementsIntoAnEnum() throws IOException {
+        String json = "[{\"status\":\"open\"},{\"status\":\"closed\"},{\"status\":\"pending\"}]";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseSamples(inputStream);
+
+            assertEquals(ObjectType.of("status", EnumType.of("open", "closed", "pending")), schema);
+        }
+    }
+
+    @Test
+    void testParseSamplesDetectsEnumsInsideNestedArraysWhileKeepingOneElementShape() throws IOException {
+        String json = "[{\"id\":1,\"tags\":[{\"k\":\"a\"}]},{\"id\":2,\"tags\":[{\"k\":\"b\"}]}]";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseSamples(inputStream);
+
+            assertInstanceOf(ObjectType.class, schema);
+            JsonType tagsType = ((ObjectType) schema).getFields().get("tags");
+            assertEquals(ArrayType.of(ObjectType.of("k", EnumType.of("a", "b"))), tagsType);
+        }
+    }
+
+    @Test
+    void testParseJsonLinesDetectsEnumsInsideNestedArraysWhileKeepingOneElementShape() throws IOException {
+        String ndjson = "{\"tags\":[{\"k\":\"a\"}]}\n{\"tags\":[{\"k\":\"b\"}]}\n";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseJsonLines(inputStream);
+
+            assertEquals(ObjectType.of("tags", ArrayType.of(ObjectType.of("k", EnumType.of("a", "b")))), schema);
+        }
+    }
+
+    @Test
+    void testMixedFormatAndPlainStringAtOnePositionIsNotAnEnum() throws IOException {
+        // With -f on, one sample's value is a date and another's is not. Reporting an enum built
+        // only from the non-date samples would misdescribe the position, so it stays a string.
+        String ndjson = "{\"d\":\"2023-01-15\"}\n{\"d\":\"whenever\"}\n{\"d\":\"whenever\"}\n";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(true, true).parseJsonLines(inputStream);
+
+            assertEquals(ObjectType.of("d", ScalarType.STRING), schema);
+        }
+    }
+
+    @Test
+    void testPositionThatMergesToAUnionIsNotReportedAsAnEnum() throws IOException {
+        // `id` is a low-cardinality string in some samples and an integer in others, so it isn't
+        // a categorical value -- the collected values are discarded rather than shown.
+        String ndjson = "{\"id\":\"a\"}\n{\"id\":\"b\"}\n{\"id\":1}\n";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseJsonLines(inputStream);
+
+            assertInstanceOf(ObjectType.class, schema);
+            JsonType idType = ((ObjectType) schema).getFields().get("id");
+            assertInstanceOf(UnionType.class, idType);
+            assertEquals(Set.of(ScalarType.INTEGER, ScalarType.STRING), ((UnionType) idType).getMembers());
+        }
+    }
+
+    @Test
+    void testEnumsNestedInsideAUnionsObjectMemberStillApply() throws IOException {
+        // The union itself gets no enum, but object members of it are still descended into.
+        String ndjson = "{\"x\":{\"k\":\"a\"}}\n{\"x\":{\"k\":\"b\"}}\n{\"x\":1}\n";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseJsonLines(inputStream);
+
+            assertInstanceOf(ObjectType.class, schema);
+            JsonType xType = ((ObjectType) schema).getFields().get("x");
+            assertInstanceOf(UnionType.class, xType);
+            assertTrue(((UnionType) xType).getMembers()
+                    .contains(ObjectType.of("k", EnumType.of("a", "b"))));
+        }
+    }
+
+    @Test
+    void testOptionalityIsPreservedThroughEnumSubstitution() throws IOException {
+        String ndjson = "{\"id\":1,\"status\":\"open\"}\n{\"id\":2}\n{\"id\":3,\"status\":\"closed\"}\n";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseJsonLines(inputStream);
+
+            assertInstanceOf(ObjectType.class, schema);
+            ObjectType objectType = (ObjectType) schema;
+            assertFalse(objectType.isOptional("id"));
+            assertTrue(objectType.isOptional("status"));
+            assertEquals(EnumType.of("open", "closed"), objectType.getFields().get("status"));
+        }
+    }
+
+    @Test
+    void testParseSamplesOnNonArrayRootDescribesTheDocumentItself() throws IOException {
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream("{\"id\": 1}".getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer().parseSamples(inputStream);
+
+            assertEquals(ObjectType.of("id", ScalarType.INTEGER), schema);
+        }
+    }
+
+    @Test
+    void testParseSamplesOnEmptyArrayYieldsEmptyArrayType() throws IOException {
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream("[]".getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer().parseSamples(inputStream);
+
+            assertEquals(new ArrayType(), schema);
+        }
+    }
+
+    @Test
+    void testParseSamplesMergesOptionalityTheSameWayTheOldMergeReduceDid() throws IOException {
+        String json = "[{\"id\": 1, \"name\": \"Alice\"}, {\"id\": 2}]";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer().parseSamples(inputStream);
+
+            assertInstanceOf(ObjectType.class, schema);
+            ObjectType objectType = (ObjectType) schema;
+            assertFalse(objectType.isOptional("id"));
+            assertTrue(objectType.isOptional("name"));
+        }
+    }
+
+    @Test
+    void testParseSamplesSkippingAlreadyFoldedShapesKeepsOptionality() throws IOException {
+        // Samples repeat their shape, so identical ones are skipped rather than re-merged. That
+        // is only safe because folding an already-absorbed shape cannot change the result -- if
+        // the skip were wrong, "name" would come back required here.
+        String json = "[{\"id\":1,\"name\":\"a\"},{\"id\":2},{\"id\":3,\"name\":\"b\"},{\"id\":4}]";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer().parseSamples(inputStream);
+
+            assertInstanceOf(ObjectType.class, schema);
+            ObjectType objectType = (ObjectType) schema;
+            assertFalse(objectType.isOptional("id"));
+            assertTrue(objectType.isOptional("name"));
+            assertEquals(ScalarType.STRING, objectType.getFields().get("name"));
+        }
+    }
+
+    @Test
+    void testParseSamplesSkippingAlreadyFoldedShapesKeepsUnions() throws IOException {
+        String json = "[{\"id\":1},{\"id\":\"two\"},{\"id\":3},{\"id\":\"four\"}]";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer().parseSamples(inputStream);
+
+            assertInstanceOf(ObjectType.class, schema);
+            JsonType idType = ((ObjectType) schema).getFields().get("id");
+            assertInstanceOf(UnionType.class, idType);
+            assertEquals(Set.of(ScalarType.INTEGER, ScalarType.STRING), ((UnionType) idType).getMembers());
+        }
+    }
+
+    @Test
+    void testParseSamplesStaysCorrectPastTheFoldedShapeLimit() throws IOException {
+        // More structurally distinct samples than the dedupe cache holds, so it stops
+        // deduplicating partway through and falls back to plain merging; the result must be
+        // unaffected. Enum detection on a unique-per-sample field is the natural way to get
+        // there, and the values also blow past MAX_VALUES, so the field ends up plain "string".
+        StringBuilder json = new StringBuilder("[");
+        for (int i = 0; i < 1100; i++) {
+            if (i > 0) {
+                json.append(',');
+            }
+            json.append("{\"id\":").append(i).append(",\"tag\":\"v").append(i).append("\"}");
+        }
+        json.append(']');
+
+        try (ByteArrayInputStream inputStream =
+                     new ByteArrayInputStream(json.toString().getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseSamples(inputStream);
+
+            ObjectType expected = new ObjectType();
+            expected.addField("id", ScalarType.INTEGER);
+            expected.addField("tag", ScalarType.STRING);
+            assertEquals(expected, schema);
+        }
+    }
+
+    @Test
+    void testParseSamplesMalformedInputReportsLocation() {
+        assertThrows(JsonSchemaAnalysisException.class, () -> {
+            try (ByteArrayInputStream inputStream =
+                         new ByteArrayInputStream("[{\"a\": }]".getBytes(StandardCharsets.UTF_8))) {
+                new JsonSchemaAnalyzer().parseSamples(inputStream);
+            }
+        });
+    }
+
+    @Test
+    void testEnumDetectionDoesNotApplyToDetectedDateOrUuidFields() throws IOException {
+        JsonType schema = inferSchema("{\"day\": \"2023-01-15\"}", true, true);
+
+        assertEquals(ObjectType.of("day", ScalarType.DATE), schema);
+    }
+
+    @Test
+    void testSameValueOnEveryJsonLineIsNotReportedAsAnEnum() throws IOException {
+        String ndjson = String.join("\n",
+                "{\"status\": \"active\"}",
+                "{\"status\": \"active\"}");
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseJsonLines(inputStream);
+
+            assertEquals(ObjectType.of("status", ScalarType.STRING), schema);
+        }
+    }
+
+    @Test
+    void testEnumDetectionMergesDistinctValuesAcrossJsonLines() throws IOException {
+        String ndjson = String.join("\n",
+                "{\"status\": \"open\"}",
+                "{\"status\": \"closed\"}",
+                "{\"status\": \"pending\"}");
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseJsonLines(inputStream);
+
+            assertEquals(ObjectType.of("status", EnumType.of("open", "closed", "pending")), schema);
+        }
+    }
+
+    @Test
+    void testEnumDetectionStaysEnumAtExactlyFiveDistinctValues() throws IOException {
+        String ndjson = String.join("\n",
+                "{\"status\": \"a\"}",
+                "{\"status\": \"b\"}",
+                "{\"status\": \"c\"}",
+                "{\"status\": \"d\"}",
+                "{\"status\": \"e\"}");
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseJsonLines(inputStream);
+
+            assertEquals(ObjectType.of("status", EnumType.of("a", "b", "c", "d", "e")), schema);
+        }
+    }
+
+    @Test
+    void testEnumDetectionFallsBackToPlainStringPastCardinalityCap() throws IOException {
+        String ndjson = String.join("\n",
+                "{\"status\": \"a\"}",
+                "{\"status\": \"b\"}",
+                "{\"status\": \"c\"}",
+                "{\"status\": \"d\"}",
+                "{\"status\": \"e\"}",
+                "{\"status\": \"f\"}");
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseJsonLines(inputStream);
+
+            assertEquals(ObjectType.of("status", ScalarType.STRING), schema);
+        }
+    }
+
+    @Test
+    void testRootLevelScalarsPoolIntoAnEnumAcrossJsonLines() throws IOException {
+        // Bare root scalars occupy one position too, so they pool like any other.
+        String ndjson = "\"active\"\n\"inactive\"\n";
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(false, true).parseJsonLines(inputStream);
+
+            assertEquals(EnumType.of("active", "inactive"), schema);
+        }
+    }
+
     private JsonType inferSchema(String json) throws IOException {
         return inferSchema(json, false);
     }
 
     private JsonType inferSchema(String json, boolean detectFormats) throws IOException {
+        return inferSchema(json, detectFormats, false);
+    }
+
+    private JsonType inferSchema(String json, boolean detectFormats, boolean detectEnums) throws IOException {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
-            JsonSchemaAnalyzer jsonSchemaAnalyzer = new JsonSchemaAnalyzer(detectFormats);
+            JsonSchemaAnalyzer jsonSchemaAnalyzer = new JsonSchemaAnalyzer(detectFormats, detectEnums);
             return jsonSchemaAnalyzer.parse(inputStream);
         }
     }

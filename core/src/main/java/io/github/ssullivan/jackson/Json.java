@@ -16,8 +16,11 @@ import java.util.stream.Collectors;
 /**
  * Renders a {@link JsonType} shape as this project's compact notation: scalar types print as
  * their name ({@code "string"}, {@code "integer"}, ...), a {@link UnionType} prints as its
- * members joined with {@code |} (e.g. {@code "integer|string"}), and an {@link ObjectType}'s
- * optional fields get a {@code ?} suffix on the key (e.g. {@code "email?"}).
+ * members joined with {@code |} (e.g. {@code "integer|string"}) — collapsing an
+ * {@link ObjectType}/{@link ArrayType}/multi-value {@link EnumType} member down to the generic
+ * label {@code "object"}/{@code "array"}/{@code "string"}, since none of those fit unambiguously
+ * inside an outer pipe-joined member list — and an {@link ObjectType}'s optional fields get a
+ * {@code ?} suffix on the key (e.g. {@code "email?"}).
  * <p>
  * Rendering goes through {@link #write(Object)}. The underlying {@code ObjectMapper} is kept
  * private deliberately: it is shared across every call, and Jackson's thread-safety guarantee
@@ -51,6 +54,12 @@ public final class Json {
             @Override
             public void serialize(ScalarType jsonType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
                 jsonGenerator.writeString(jsonType.toString());
+            }
+        });
+        module.addSerializer(EnumType.class, new JsonSerializer<>() {
+            @Override
+            public void serialize(EnumType enumType, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+                jsonGenerator.writeString(enumType.toString());
             }
         });
         module.addSerializer(UnionType.class, new JsonSerializer<>() {
@@ -98,6 +107,13 @@ public final class Json {
         }
         if (type instanceof ArrayType) {
             return "array";
+        }
+        if (type instanceof EnumType) {
+            // A multi-value EnumType's own toString() is already a pipe-joined list; treating
+            // that as one more atomic label here would nest one pipe-joined list inside another,
+            // making the two ambiguous (see LlmWriter.memberLabel, which applies the same rule).
+            // Collapse to the generic label instead, exactly like ObjectType/ArrayType above.
+            return "string";
         }
         return String.valueOf(type);
     }

@@ -20,6 +20,9 @@ reading the whole payload into context.
   merged shape showing which fields are optional and which vary in type.
 - Field values look like dates, timestamps, or UUIDs and you want that reflected in the output
   instead of everything reported as a generic string.
+- A string field only ever takes a handful of distinct values (≤5) — e.g. a status or category
+  field — and you want that reflected as an enum of the exact values instead of generic
+  `string`.
 - You need a real JSON Schema (draft-07) document to hand to a validator or code generator.
 
 ## Usage
@@ -46,6 +49,7 @@ own — choose them using the guidance below.
 | `-m`, `--merge-samples` | The input is a top-level *array of sample records* rather than one document. Folds them into a single shape: fields missing from some samples get `?`, fields whose type varies become a `\|` union. |
 | `-j`, `--jsonl` | The input is newline-delimited JSON (NDJSON) — one JSON value per line — instead of a single document or array. Merges the values the same way `-m` merges array elements; `-m` itself has no effect when `-j` is set. |
 | `-f`, `--detect-formats` | String values may be dates (`YYYY-MM-DD`), timestamps (RFC 3339), or UUIDs, and you want that reflected in the output instead of everything reported as generic `string`. Off by default. |
+| `-e`, `--detect-enums` | A string field only ever takes a handful of distinct values (≤5) and you want the exact values reported instead of generic `string`. A 6th distinct value falls back to plain `string`, as does a field holding just one value. Works at any depth, including inside arrays; combine with `-m`/`-j` to pool values across samples. Add `-f` too if date/UUID-shaped values should be reported as `date`/`uuid` rather than as enum values. Off by default. |
 | `-s`, `--json-schema` | Only when a real JSON Schema document is explicitly wanted. Much more verbose than `-l`. |
 | *(none)* | The default JSON-shaped compact notation. Prefer `-l` unless you specifically want valid JSON out. |
 
@@ -106,7 +110,18 @@ id: uuid
 note: string
 ```
 
-The `-l` notation is specified in full in the project README's "Example8: LLM-Optimized
+Detecting low-cardinality enum fields across merged samples:
+
+```shell
+bash scripts/analyze.sh -l -m -e -i tickets.json
+```
+
+```
+id: integer
+status: closed|open|pending
+```
+
+The `-l` notation is specified in full in the project README's "Example9: LLM-Optimized
 Output" section.
 
 ## Requirements and troubleshooting
@@ -118,6 +133,6 @@ The script prefers a locally-built jar, searching upward from the current direct
 released jar to `~/.cache/json-schema-analyzer/` (override with `JSON_SCHEMA_ANALYZER_CACHE`)
 and reuses it on later runs.
 
-If you see `Unknown option: '-l'` (or `-m`/`-j`/`-f`/`-s`), the jar being used predates that
+If you see `Unknown option: '-l'` (or `-m`/`-j`/`-f`/`-e`/`-s`), the jar being used predates that
 flag — almost always the downloaded release rather than a local build. Building the repo locally
 (`mvn clean install`) makes the script prefer that fresh jar instead.

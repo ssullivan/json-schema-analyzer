@@ -45,4 +45,12 @@ class JsonTypeEncapsulationTest {
         assertThrows(UnsupportedOperationException.class, () -> unionType.getMembers().clear());
         assertEquals(2, unionType.getMembers().size());
     }
+
+    @Test
+    void testEnumTypeValuesAreUnmodifiable() {
+        EnumType enumType = EnumType.of("a", "b");
+
+        assertThrows(UnsupportedOperationException.class, () -> enumType.getValues().clear());
+        assertEquals(2, enumType.getValues().size());
+    }
 }

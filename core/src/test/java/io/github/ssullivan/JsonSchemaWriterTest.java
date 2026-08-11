@@ -217,6 +217,43 @@ class JsonSchemaWriterTest {
     }
 
     @Test
+    void testEnumScalarEmitsTypeStringAndSortedEnumArray() {
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(EnumType.of("closed", "open", "pending"));
+
+        assertEquals("string", schema.get("type").asText());
+        List<String> values = new ArrayList<>();
+        schema.get("enum").forEach(node -> values.add(node.asText()));
+        assertEquals(List.of("closed", "open", "pending"), values);
+    }
+
+    @Test
+    void testSingleValueEnumOmitsEnumArray() {
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(EnumType.of("active"));
+
+        assertEquals("string", schema.get("type").asText());
+        assertFalse(schema.has("enum"));
+    }
+
+    @Test
+    void testUnionWithEnumMemberUsesAnyOfNotTypeArray() {
+        UnionType unionType = new UnionType(Set.of(EnumType.of("open", "closed"), ScalarType.INTEGER));
+
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(unionType);
+
+        assertFalse(schema.has("type"));
+        assertTrue(schema.get("anyOf").isArray());
+        assertEquals(2, schema.get("anyOf").size());
+
+        boolean anyMemberHasEnum = false;
+        for (var member : schema.get("anyOf")) {
+            if (member.has("enum")) {
+                anyMemberHasEnum = true;
+            }
+        }
+        assertTrue(anyMemberHasEnum);
+    }
+
+    @Test
     void testToJsonSchemaRejectsNull() {
         assertThrows(NullPointerException.class, () -> JsonSchemaWriter.toJsonSchema(null));
     }

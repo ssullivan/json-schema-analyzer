@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -155,6 +156,115 @@ class MainTest {
         assertEquals(0, exitCode);
         assertTrue(command.llm);
         assertEquals(ObjectType.of("createdAt", ScalarType.DATE), commandLine.getExecutionResult());
+    }
+
+    @Test
+    void testDetectEnumsFlagComposesWithMergeFlag(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir,
+                "[{\"status\": \"open\"}, {\"status\": \"closed\"}, {\"status\": \"pending\"}]");
+
+        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+        int exitCode = commandLine.execute("-i", file.toString(), "-m", "-e");
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        JsonType statusType = ((ObjectType) result).getFields().get("status");
+        assertInstanceOf(EnumType.class, statusType);
+        assertEquals(Set.of("open", "closed", "pending"), ((EnumType) statusType).getValues());
+    }
+
+    @Test
+    void testWithoutDetectEnumsFlagStringsStayPlain(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir,
+                "[{\"status\": \"open\"}, {\"status\": \"closed\"}]");
+
+        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+        int exitCode = commandLine.execute("-i", file.toString(), "-m");
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        assertEquals(ScalarType.STRING, ((ObjectType) result).getFields().get("status"));
+    }
+
+    @Test
+    void testDetectEnumsFlagFallsBackToPlainStringPastCap(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir,
+                "[{\"status\":\"a\"},{\"status\":\"b\"},{\"status\":\"c\"},"
+                        + "{\"status\":\"d\"},{\"status\":\"e\"},{\"status\":\"f\"}]");
+
+        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+        int exitCode = commandLine.execute("-i", file.toString(), "-m", "-e");
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        assertEquals(ScalarType.STRING, ((ObjectType) result).getFields().get("status"));
+    }
+
+    @Test
+    void testDetectEnumsFlagComposesWithJsonSchemaFlag(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir,
+                "[{\"status\": \"open\"}, {\"status\": \"closed\"}]");
+
+        Main.JsonSchemaAnalyzeCommand command = new Main.JsonSchemaAnalyzeCommand();
+        CommandLine commandLine = new CommandLine(command);
+        int exitCode = commandLine.execute("-i", file.toString(), "-m", "-e", "-s");
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(result);
+        ObjectNode statusSchema = (ObjectNode) schema.get("properties").get("status");
+        assertEquals("string", statusSchema.get("type").asText());
+        assertTrue(statusSchema.get("enum").isArray());
+        assertEquals(2, statusSchema.get("enum").size());
+    }
+
+    @Test
+    void testDetectEnumsFlagComposesWithLlmFlag(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir,
+                "[{\"status\": \"open\"}, {\"status\": \"closed\"}]");
+
+        Main.JsonSchemaAnalyzeCommand command = new Main.JsonSchemaAnalyzeCommand();
+        CommandLine commandLine = new CommandLine(command);
+        int exitCode = commandLine.execute("-i", file.toString(), "-m", "-e", "-l");
+
+        assertEquals(0, exitCode);
+        assertTrue(command.llm);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        assertEquals(EnumType.of("open", "closed"), ((ObjectType) result).getFields().get("status"));
+    }
+
+    @Test
+    void testDetectEnumsFlagComposesWithJsonLinesFlag(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir, "{\"status\": \"open\"}\n{\"status\": \"closed\"}\n");
+
+        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+        int exitCode = commandLine.execute("-i", file.toString(), "-j", "-e");
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        assertEquals(EnumType.of("open", "closed"), ((ObjectType) result).getFields().get("status"));
+    }
+
+    @Test
+    void testDetectEnumsFlagAndDetectFormatsFlagComposeIndependently(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir,
+                "[{\"status\": \"open\", \"id\": \"550e8400-e29b-41d4-a716-446655440000\"}, "
+                        + "{\"status\": \"closed\", \"id\": \"6ba7b810-9dad-11d1-80b4-00c04fd430c8\"}]");
+
+        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+        int exitCode = commandLine.execute("-i", file.toString(), "-m", "-e", "-f");
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        assertEquals(EnumType.of("open", "closed"), ((ObjectType) result).getFields().get("status"));
+        assertEquals(ScalarType.UUID, ((ObjectType) result).getFields().get("id"));
     }
 
     @Test

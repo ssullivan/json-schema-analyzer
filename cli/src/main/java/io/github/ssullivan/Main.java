@@ -1,7 +1,6 @@
 package io.github.ssullivan;
 
 import io.github.ssullivan.analyze.JsonSchemaAnalyzer;
-import io.github.ssullivan.analyze.SchemaMerger;
 import io.github.ssullivan.format.LlmWriter;
 import io.github.ssullivan.jackson.Json;
 import io.github.ssullivan.jackson.JsonSchemaWriter;
@@ -69,6 +68,10 @@ public final class Main {
                 description = "Read the input as newline-delimited JSON (NDJSON), treating each value as one sample and merging them into a single shape, like -m does for a JSON array")
         private boolean jsonLines;
 
+        @CommandLine.Option(names = {"-e", "--detect-enums"},
+                description = "Detect low-cardinality string fields (<= 5 distinct values) and report them as an enum of the observed values, instead of the generic \"string\" type. A field with more distinct values falls back to plain \"string\"")
+        private boolean detectEnums;
+
         @CommandLine.Option(names = {"-f", "--detect-formats"},
                 description = "Detect string formats (date, date-time, uuid) instead of reporting every string as the generic \"string\" type")
         private boolean detectFormats;
@@ -88,21 +91,15 @@ public final class Main {
             }
 
             try (InputStream inputStream = file != null ? new FileInputStream(file) : System.in) {
-                JsonSchemaAnalyzer analyzer = new JsonSchemaAnalyzer(detectFormats);
+                JsonSchemaAnalyzer analyzer = new JsonSchemaAnalyzer(detectFormats, detectEnums);
 
                 if (jsonLines) {
                     return analyzer.parseJsonLines(inputStream);
                 }
-
-                JsonType result = analyzer.parse(inputStream);
-
-                if (mergeSamples && result instanceof ArrayType arrayType) {
-                    return arrayType.getFields().stream()
-                            .reduce(SchemaMerger::merge)
-                            .orElse(arrayType);
+                if (mergeSamples) {
+                    return analyzer.parseSamples(inputStream);
                 }
-
-                return result;
+                return analyzer.parse(inputStream);
             }
         }
     }

@@ -79,7 +79,7 @@ java -jar json-schema-analyzer-<version>.jar -i example.json
 * [Build](#build)
 * [CLI](#cli)
 * [Examples](#examples)
-  * [Example8: LLM-Optimized Output](#example8-llm-optimized-output)
+  * [Example9: LLM-Optimized Output](#example9-llm-optimized-output)
 * [Error Handling](#error-handling)
 * [Using as a Library](#using-as-a-library)
 * [Agent Skills](#agent-skills)
@@ -115,18 +115,23 @@ To build a native binary yourself, use a [GraalVM](https://www.graalvm.org/) JDK
 
 ## CLI 
 ```shell
-Usage: json-analyze [-fhjlmsV] [-i=<file>]
+Usage: json-analyze [-efhjlmsV] [-i=<file>]
 Describes the fields and datatypes in a JSON document.
+  -e, --detect-enums        Detect low-cardinality string fields (<= 5 distinct
+                              values) and report them as an enum of the
+                              observed values, instead of the generic "string"
+                              type. A field with more distinct values falls
+                              back to plain "string"
   -f, --detect-formats      Detect string formats (date, date-time, uuid)
                               instead of reporting every string as the generic
                               "string" type
   -h, --help                Show this help message and exit.
   -i, --input-file=<file>   The JSON file to analyze; reads from stdin if
                               omitted
-  -j, --jsonl                Read the input as newline-delimited JSON (NDJSON),
+  -j, --jsonl               Read the input as newline-delimited JSON (NDJSON),
                               treating each value as one sample and merging
-                              them into a single shape, like -m does for a
-                              JSON array
+                              them into a single shape, like -m does for a JSON
+                              array
   -l, --llm                 Print the shape in a compact, punctuation-free
                               notation designed to be pasted into an LLM prompt
                               cheaply, instead of the default compact notation
@@ -348,7 +353,69 @@ disagree on which format — the field falls back to the generic `string` type r
 reporting a `date|uuid`-style union, since knowing *a* format was ambiguous is more useful than
 an unreadable mix.
 
-### Example7: JSON Schema Output
+### Example7: Enum Detection
+
+Pass `-e`/`--detect-enums` to have a string field that only ever takes a handful of distinct
+values reported as an enum of those exact values, instead of the generic `string` type. Off by
+default. It composes with `-m`/`-j` to pool values across samples, but works on a single document
+too.
+
+```shell
+cat <<EOF >tickets.json
+[
+  {"id": 1, "status": "open"},
+  {"id": 2, "status": "closed"},
+  {"id": 3, "status": "pending"},
+  {"id": 4, "status": "open"}
+]
+EOF
+java -jar json-schema-analyzer-<version>.jar -i tickets.json -m -e
+```
+
+would produce the following output
+
+```json
+{
+  "id" : "integer",
+  "status" : "closed|open|pending"
+}
+```
+
+A field is only reported as an enum while it holds 5 or fewer distinct values — a 6th distinct
+value falls back to plain `string`, with no literal values shown. A field that happens to hold
+the same single value everywhere is reported as plain `string`, not a one-value enum; only
+genuine variation across 2 or more values is reported.
+
+Detection applies at any depth, and every element of an array shares one position, so their
+values pool together. That means it works for fields of objects inside an array, and for bare
+arrays of strings:
+
+```shell
+echo '{"tags": ["a", "b", "a"], "items": [{"k": "x"}, {"k": "y"}]}' \
+  | java -jar json-schema-analyzer-<version>.jar -e -l
+```
+
+```
+items[]:
+  k: x|y
+tags[]: a|b
+```
+
+**Add `-f` if you don't want date-like or UUID-like values reported as enum values.** On its own,
+`-e` has no notion of those formats, so a `"2023-06-01"` field with a handful of distinct values
+is reported as an enum of those dates. With `-f` also passed, such a field is recognized as
+`date`/`date-time`/`uuid` and left alone, since those aren't categorical values — and a field
+that is a date in only *some* samples reports as plain `string` rather than an enum built from
+the rest. A field that varies in type across samples (`integer|string`, say) likewise gets no
+enum.
+
+Enum values are printed as-is, so a value containing `|` is escaped (`a\|b`) to keep it distinct
+from the separator. One ambiguity remains by design: a value that happens to *be* a type name —
+an enum of `"string"` and `"integer"`, say — renders as `integer|string`, which reads the same as
+a genuine integer-or-string union. Use `-s` if you need that distinction; its `enum` array is a
+real JSON array and is never ambiguous.
+
+### Example8: JSON Schema Output
 
 Pass `-s`/`--json-schema` to print the shape as a real [JSON Schema draft-07](https://json-schema.org/specification-links.html#draft-7)
 document instead of the default compact notation — composes with `-m` the same way. Note that
@@ -401,7 +468,7 @@ would produce the following output
 }
 ```
 
-### Example8: LLM-Optimized Output
+### Example9: LLM-Optimized Output
 
 Pass `-l`/`--llm` to print the shape in a compact notation with no braces, quotes, or commas —
 nesting is indentation only, array-typed fields get a trailing `[]`, and optional/union fields
@@ -463,11 +530,11 @@ if (schema instanceof ObjectType objectType) {
 }
 ```
 
-`JsonType` is a sealed interface (`ObjectType`, `ArrayType`, `ScalarType`, `UnionType`), so callers
-can pattern-match on it directly. `SchemaMerger.merge(a, b)` is available the same way for folding
-multiple samples into one shape, exactly as the CLI's `-m` flag does internally. To render a shape
-the way the CLI does, use `Json.write(schema)` for the compact notation or
-`JsonSchemaWriter.toJsonSchema(schema)` for a draft-07 document.
+`JsonType` is a sealed interface (`ObjectType`, `ArrayType`, `ScalarType`, `EnumType`,
+`UnionType`), so callers can pattern-match on it directly. `SchemaMerger.merge(a, b)` is
+available the same way for folding multiple samples into one shape, exactly as the CLI's `-m`
+flag does internally. To render a shape the way the CLI does, use `Json.write(schema)` for the
+compact notation or `JsonSchemaWriter.toJsonSchema(schema)` for a draft-07 document.
 
 For newline-delimited JSON, `analyzer.parseJsonLines(inputStream)` reads a stream of
 whitespace-separated JSON values — one per line, by NDJSON convention — and merges them into a
@@ -478,6 +545,19 @@ analyzer with `new JsonSchemaAnalyzer(true)` instead of the no-arg constructor. 
 gains three additional values it can return for a string field — `DATE`, `DATE_TIME`, `UUID` — and
 `JsonSchemaWriter.toJsonSchema(...)` emits a matching `"format"` keyword alongside
 `"type": "string"` for them.
+
+To opt in to enum detection (off by default), pass `true` as the second constructor argument —
+e.g. `new JsonSchemaAnalyzer(false, true)`. A position holding between 2 and 5 distinct string
+values comes back as an `EnumType` of them instead of the generic `ScalarType.STRING`; one
+holding more, or holding a single value, or whose values are sometimes a detected
+`DATE`/`DATE_TIME`/`UUID`, stays `ScalarType.STRING`. Values are collected per position and
+substituted in only once the shape is final, so detection works at any depth — including inside
+arrays, whose elements share one position and pool their values.
+
+`analyzer.parseSamples(inputStream)` is what the CLI's `-m` flag calls: it treats each element of
+a top-level array as one sample and merges them, streaming rather than building an intermediate
+`ArrayType`, so cost stays linear in the number of samples. Input whose root isn't an array is
+described as the single document it is, exactly as `parse()` would.
 
 Collections returned by `getFields()`, `getOptionalFields()`, and `getMembers()` are unmodifiable
 views. If you build shapes by hand rather than getting them from `parse()`, finish building a type
@@ -521,7 +601,10 @@ This project follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PA
   off by default via the no-arg `JsonSchemaAnalyzer()` constructor and the CLI's `-f` flag both
   requiring explicit action — so no existing caller's output changes unless they opt in. Flagging
   this explicitly since it's a judgment call on an edge case this policy didn't originally
-  anticipate.)
+  anticipate. Enum detection similarly adds a new `EnumType` implementation to what `JsonType`
+  permits — also normally a MAJOR change per the bullet above. It ships as MINOR for the same
+  reason: strictly opt-in, off by default via the boolean `detectEnums` constructor parameter and
+  the CLI's `-e` flag both requiring explicit action.)
 * **PATCH** — backward-compatible bug fixes, documentation, internal refactors, and dependency
   bumps that don't change public behavior.
 
