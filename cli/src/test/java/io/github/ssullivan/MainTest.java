@@ -88,6 +88,76 @@ class MainTest {
     }
 
     @Test
+    void testDetectFormatsFlagDetectsDate(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir, "{\"createdAt\": \"2023-01-15\"}");
+
+        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+        int exitCode = commandLine.execute("-i", file.toString(), "-f");
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        assertEquals(ScalarType.DATE, ((ObjectType) result).getFields().get("createdAt"));
+    }
+
+    @Test
+    void testWithoutDetectFormatsFlagStringsStayPlain(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir, "{\"createdAt\": \"2023-01-15\"}");
+
+        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+        int exitCode = commandLine.execute("-i", file.toString());
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        assertEquals(ScalarType.STRING, ((ObjectType) result).getFields().get("createdAt"));
+    }
+
+    @Test
+    void testDetectFormatsFlagComposesWithMergeFlag(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir,
+                "[{\"createdAt\": \"2023-01-15\"}, {\"createdAt\": \"not a date\"}]");
+
+        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+        int exitCode = commandLine.execute("-i", file.toString(), "-f", "-m");
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        // Merged samples disagree on the field's format, so it falls back to plain "string"
+        // rather than reporting a date|string union
+        assertEquals(ScalarType.STRING, ((ObjectType) result).getFields().get("createdAt"));
+    }
+
+    @Test
+    void testDetectFormatsFlagComposesWithJsonSchemaFlag(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir, "{\"createdAt\": \"2023-01-15\"}");
+
+        Main.JsonSchemaAnalyzeCommand command = new Main.JsonSchemaAnalyzeCommand();
+        CommandLine commandLine = new CommandLine(command);
+        int exitCode = commandLine.execute("-i", file.toString(), "-f", "-s");
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(result);
+        assertEquals("date", schema.get("properties").get("createdAt").get("format").asText());
+    }
+
+    @Test
+    void testDetectFormatsFlagParsesWithoutAffectingCallResultWhenCombinedWithLlm(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir, "{\"createdAt\": \"2023-01-15\"}");
+
+        Main.JsonSchemaAnalyzeCommand command = new Main.JsonSchemaAnalyzeCommand();
+        CommandLine commandLine = new CommandLine(command);
+        int exitCode = commandLine.execute("-i", file.toString(), "-f", "-l");
+
+        assertEquals(0, exitCode);
+        assertTrue(command.llm);
+        assertEquals(ObjectType.of("createdAt", ScalarType.DATE), commandLine.getExecutionResult());
+    }
+
+    @Test
     void testMergeFlagOnNonArrayRootLeavesResultUnchanged(@TempDir Path tempDir) throws IOException {
         Path file = writeJson(tempDir, "{\"id\": 1}");
 

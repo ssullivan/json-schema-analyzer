@@ -79,7 +79,7 @@ java -jar json-schema-analyzer-<version>.jar -i example.json
 * [Build](#build)
 * [CLI](#cli)
 * [Examples](#examples)
-  * [Example7: LLM-Optimized Output](#example7-llm-optimized-output)
+  * [Example8: LLM-Optimized Output](#example8-llm-optimized-output)
 * [Error Handling](#error-handling)
 * [Using as a Library](#using-as-a-library)
 * [Agent Skills](#agent-skills)
@@ -115,8 +115,11 @@ To build a native binary yourself, use a [GraalVM](https://www.graalvm.org/) JDK
 
 ## CLI 
 ```shell
-Usage: json-analyze [-hjlmsV] [-i=<file>]
+Usage: json-analyze [-fhjlmsV] [-i=<file>]
 Describes the fields and datatypes in a JSON document.
+  -f, --detect-formats      Detect string formats (date, date-time, uuid)
+                              instead of reporting every string as the generic
+                              "string" type
   -h, --help                Show this help message and exit.
   -i, --input-file=<file>   The JSON file to analyze; reads from stdin if
                               omitted
@@ -314,7 +317,38 @@ would produce the following output
 It composes with `-s` and `-l` the same way `-m` does. `-m` itself has no effect when `-j` is
 set, since NDJSON input is always merged.
 
-### Example6: JSON Schema Output
+### Example6: String Format Detection
+
+Pass `-f`/`--detect-formats` to have string values checked against three known formats — ISO
+8601 dates (`YYYY-MM-DD`), RFC 3339 timestamps, and canonical UUIDs — instead of every string
+being reported as the generic `string` type. Off by default, so existing output is unaffected
+unless you opt in.
+
+```shell
+cat <<EOF >events.json
+{"id": "550e8400-e29b-41d4-a716-446655440000", "createdAt": "2023-06-01T14:22:00Z", "day": "2023-06-01", "note": "hello"}
+EOF
+java -jar json-schema-analyzer-<version>.jar -i events.json -f
+```
+
+would produce the following output
+
+```json
+{
+  "createdAt" : "date-time",
+  "day" : "date",
+  "id" : "uuid",
+  "note" : "string"
+}
+```
+
+It composes with `-m`, `-j`, `-s`, and `-l` the same way the other flags do. When merged samples
+disagree on a field's format — one row has a `date`, another has a plain string, or two rows
+disagree on which format — the field falls back to the generic `string` type rather than
+reporting a `date|uuid`-style union, since knowing *a* format was ambiguous is more useful than
+an unreadable mix.
+
+### Example7: JSON Schema Output
 
 Pass `-s`/`--json-schema` to print the shape as a real [JSON Schema draft-07](https://json-schema.org/specification-links.html#draft-7)
 document instead of the default compact notation — composes with `-m` the same way. Note that
@@ -367,7 +401,7 @@ would produce the following output
 }
 ```
 
-### Example7: LLM-Optimized Output
+### Example8: LLM-Optimized Output
 
 Pass `-l`/`--llm` to print the shape in a compact notation with no braces, quotes, or commas —
 nesting is indentation only, array-typed fields get a trailing `[]`, and optional/union fields
@@ -439,6 +473,12 @@ For newline-delimited JSON, `analyzer.parseJsonLines(inputStream)` reads a strea
 whitespace-separated JSON values — one per line, by NDJSON convention — and merges them into a
 single shape, exactly as the CLI's `-j` flag does.
 
+To opt in to string format detection (dates, timestamps, UUIDs — off by default), construct the
+analyzer with `new JsonSchemaAnalyzer(true)` instead of the no-arg constructor. `ScalarType` then
+gains three additional values it can return for a string field — `DATE`, `DATE_TIME`, `UUID` — and
+`JsonSchemaWriter.toJsonSchema(...)` emits a matching `"format"` keyword alongside
+`"type": "string"` for them.
+
 Collections returned by `getFields()`, `getOptionalFields()`, and `getMembers()` are unmodifiable
 views. If you build shapes by hand rather than getting them from `parse()`, finish building a type
 *before* adding it to another one: `equals`/`hashCode` are derived from a type's contents, and
@@ -475,7 +515,13 @@ This project follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PA
   renaming a public class/method, changing a method signature, changing what `JsonType`
   permits) or to the CLI's flags/output format.
 * **MINOR** — new backward-compatible functionality: a new CLI flag, a new public method, a new
-  output mode.
+  output mode. (Note: string format detection added three new `ScalarType` constants — `DATE`,
+  `DATE_TIME`, `UUID` — which is normally a MAJOR-flagged change per the bullet above, since it
+  changes what `JsonType` permits. It ships as MINOR here because detection is strictly opt-in —
+  off by default via the no-arg `JsonSchemaAnalyzer()` constructor and the CLI's `-f` flag both
+  requiring explicit action — so no existing caller's output changes unless they opt in. Flagging
+  this explicitly since it's a judgment call on an edge case this policy didn't originally
+  anticipate.)
 * **PATCH** — backward-compatible bug fixes, documentation, internal refactors, and dependency
   bumps that don't change public behavior.
 

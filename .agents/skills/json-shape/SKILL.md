@@ -18,6 +18,8 @@ reading the whole payload into context.
 - A JSON file is too large or repetitive to paste, but you need its structure.
 - You have an array of sample records, or a newline-delimited JSON (NDJSON) file, and want one
   merged shape showing which fields are optional and which vary in type.
+- Field values look like dates, timestamps, or UUIDs and you want that reflected in the output
+  instead of everything reported as a generic string.
 - You need a real JSON Schema (draft-07) document to hand to a validator or code generator.
 
 ## Usage
@@ -43,6 +45,7 @@ own — choose them using the guidance below.
 | `-l`, `--llm` | **Default choice.** Compact, punctuation-free notation — cheapest to read. |
 | `-m`, `--merge-samples` | The input is a top-level *array of sample records* rather than one document. Folds them into a single shape: fields missing from some samples get `?`, fields whose type varies become a `\|` union. |
 | `-j`, `--jsonl` | The input is newline-delimited JSON (NDJSON) — one JSON value per line — instead of a single document or array. Merges the values the same way `-m` merges array elements; `-m` itself has no effect when `-j` is set. |
+| `-f`, `--detect-formats` | String values may be dates (`YYYY-MM-DD`), timestamps (RFC 3339), or UUIDs, and you want that reflected in the output instead of everything reported as generic `string`. Off by default. |
 | `-s`, `--json-schema` | Only when a real JSON Schema document is explicitly wanted. Much more verbose than `-l`. |
 | *(none)* | The default JSON-shaped compact notation. Prefer `-l` unless you specifically want valid JSON out. |
 
@@ -90,7 +93,20 @@ Merging a newline-delimited JSON (NDJSON) file — no need to wrap it in `[` `]`
 bash scripts/analyze.sh -l -j -i samples.ndjson
 ```
 
-The `-l` notation is specified in full in the project README's "Example7: LLM-Optimized
+Detecting string formats:
+
+```shell
+bash scripts/analyze.sh -l -f -i events.json
+```
+
+```
+createdAt: date-time
+day: date
+id: uuid
+note: string
+```
+
+The `-l` notation is specified in full in the project README's "Example8: LLM-Optimized
 Output" section.
 
 ## Requirements and troubleshooting
@@ -102,6 +118,6 @@ The script prefers a locally-built jar, searching upward from the current direct
 released jar to `~/.cache/json-schema-analyzer/` (override with `JSON_SCHEMA_ANALYZER_CACHE`)
 and reuses it on later runs.
 
-If you see `Unknown option: '-l'` (or `-m`/`-j`/`-s`), the jar being used predates that flag —
-almost always the downloaded release rather than a local build. Building the repo locally
+If you see `Unknown option: '-l'` (or `-m`/`-j`/`-f`/`-s`), the jar being used predates that
+flag — almost always the downloaded release rather than a local build. Building the repo locally
 (`mvn clean install`) makes the script prefer that fresh jar instead.

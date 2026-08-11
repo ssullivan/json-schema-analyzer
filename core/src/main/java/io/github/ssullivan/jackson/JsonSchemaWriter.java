@@ -57,6 +57,10 @@ public final class JsonSchemaWriter {
     private static ObjectNode scalarSchema(ScalarType scalarType) {
         ObjectNode node = JsonNodeFactory.instance.objectNode();
         node.put("type", jsonSchemaTypeName(scalarType));
+        String format = jsonSchemaFormat(scalarType);
+        if (format != null) {
+            node.put("format", format);
+        }
         return node;
     }
 
@@ -102,8 +106,10 @@ public final class JsonSchemaWriter {
     private static ObjectNode unionSchema(UnionType unionType) {
         Set<JsonType> members = unionType.getMembers();
         boolean allScalar = members.stream().allMatch(member -> member instanceof ScalarType);
+        boolean anyFormatted = members.stream()
+                .anyMatch(member -> member instanceof ScalarType st && jsonSchemaFormat(st) != null);
 
-        if (allScalar) {
+        if (allScalar && !anyFormatted) {
             ObjectNode node = JsonNodeFactory.instance.objectNode();
             ArrayNode typeNode = node.putArray("type");
             members.stream()
@@ -114,8 +120,9 @@ public final class JsonSchemaWriter {
             return node;
         }
 
-        // At least one member is an object/array, which needs a full sub-schema rather than a
-        // bare type name.
+        // At least one member is an object/array (needs a full sub-schema rather than a bare
+        // type name) or carries a format that the flattened "type": [...] array can't express
+        // per-member, so every member gets its own full sub-schema instead.
         return anyOfSchema(members);
     }
 
@@ -132,10 +139,23 @@ public final class JsonSchemaWriter {
     private static String jsonSchemaTypeName(ScalarType scalarType) {
         return switch (scalarType) {
             case NULL -> "null";
-            case STRING -> "string";
+            case STRING, DATE, DATE_TIME, UUID -> "string";
             case INTEGER -> "integer";
             case FLOAT, NUMBER -> "number";
             case BOOLEAN -> "boolean";
+        };
+    }
+
+    /**
+     * @return the JSON Schema {@code format} keyword value for a detected string format, or
+     *         {@code null} for scalar types that don't carry one.
+     */
+    private static String jsonSchemaFormat(ScalarType scalarType) {
+        return switch (scalarType) {
+            case DATE -> "date";
+            case DATE_TIME -> "date-time";
+            case UUID -> "uuid";
+            default -> null;
         };
     }
 }

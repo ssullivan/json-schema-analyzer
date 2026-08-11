@@ -343,9 +343,63 @@ class JsonSchemaAnalyzerTest {
         assertTrue(exception.getMessage().contains("line 2"), exception.getMessage());
     }
 
+    @Test
+    void testFormatDetectionOffByDefaultLeavesDateLikeStringsPlain() throws IOException {
+        assertEquals(ScalarType.STRING, inferSchema("\"2023-01-15\""));
+    }
+
+    @Test
+    void testFormatDetectionOnDetectsDate() throws IOException {
+        assertEquals(ScalarType.DATE, inferSchema("\"2023-01-15\"", true));
+    }
+
+    @Test
+    void testFormatDetectionOnDetectsDateTime() throws IOException {
+        assertEquals(ScalarType.DATE_TIME, inferSchema("\"2023-01-15T10:30:00Z\"", true));
+    }
+
+    @Test
+    void testFormatDetectionOnDetectsUuid() throws IOException {
+        assertEquals(ScalarType.UUID, inferSchema("\"550e8400-e29b-41d4-a716-446655440000\"", true));
+    }
+
+    @Test
+    void testFormatDetectionOnLeavesPlainStringsAlone() throws IOException {
+        assertEquals(ScalarType.STRING, inferSchema("\"hello\"", true));
+    }
+
+    @Test
+    void testFormatDetectionAppliesInsideNestedObjectsAndArrays() throws IOException {
+        String json = "{\"events\": [\"2023-01-15\", \"2023-02-20\"]}";
+
+        JsonType schema = inferSchema(json, true);
+
+        assertEquals(
+                ObjectType.of("events", ArrayType.of(ScalarType.DATE)),
+                schema
+        );
+    }
+
+    @Test
+    void testFormatDetectionAppliesInJsonLinesMode() throws IOException {
+        String ndjson = String.join("\n",
+                "{\"created\": \"2023-01-15\"}",
+                "{\"created\": \"2023-02-20\"}");
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(ndjson.getBytes(StandardCharsets.UTF_8))) {
+            JsonType schema = new JsonSchemaAnalyzer(true).parseJsonLines(inputStream);
+
+            assertEquals(ObjectType.of("created", ScalarType.DATE), schema);
+        }
+    }
+
     private JsonType inferSchema(String json) throws IOException {
+        return inferSchema(json, false);
+    }
+
+    private JsonType inferSchema(String json, boolean detectFormats) throws IOException {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
-            JsonSchemaAnalyzer jsonSchemaAnalyzer = new JsonSchemaAnalyzer();
+            JsonSchemaAnalyzer jsonSchemaAnalyzer = new JsonSchemaAnalyzer(detectFormats);
             return jsonSchemaAnalyzer.parse(inputStream);
         }
     }
