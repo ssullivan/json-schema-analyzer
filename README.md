@@ -79,7 +79,7 @@ java -jar json-schema-analyzer-<version>.jar -i example.json
 * [Build](#build)
 * [CLI](#cli)
 * [Examples](#examples)
-  * [Example6: LLM-Optimized Output](#example6-llm-optimized-output)
+  * [Example7: LLM-Optimized Output](#example7-llm-optimized-output)
 * [Error Handling](#error-handling)
 * [Using as a Library](#using-as-a-library)
 * [Agent Skills](#agent-skills)
@@ -115,11 +115,15 @@ To build a native binary yourself, use a [GraalVM](https://www.graalvm.org/) JDK
 
 ## CLI 
 ```shell
-Usage: json-analyze [-hlmsV] [-i=<file>]
+Usage: json-analyze [-hjlmsV] [-i=<file>]
 Describes the fields and datatypes in a JSON document.
   -h, --help                Show this help message and exit.
   -i, --input-file=<file>   The JSON file to analyze; reads from stdin if
                               omitted
+  -j, --jsonl                Read the input as newline-delimited JSON (NDJSON),
+                              treating each value as one sample and merging
+                              them into a single shape, like -m does for a
+                              JSON array
   -l, --llm                 Print the shape in a compact, punctuation-free
                               notation designed to be pasted into an LLM prompt
                               cheaply, instead of the default compact notation
@@ -280,7 +284,37 @@ java -jar json-schema-analyzer-<version>.jar -i nested-samples.json -m
 }
 ```
 
-### Example5: JSON Schema Output
+### Example5: NDJSON Input
+
+Pass `-j`/`--jsonl` when the input is newline-delimited JSON (NDJSON) — one JSON value per line,
+as produced by log exports or streaming APIs — rather than a single document. Each value is
+treated as a sample and merged into one shape exactly the way `-m` merges elements of a JSON
+array, so there's no need to wrap the lines in `[` `]` first or hold them all in memory as one
+array.
+
+```shell
+cat <<EOF >samples.ndjson
+{"id": 1, "name": "Alice", "email": "a@example.com"}
+{"id": 2, "name": "Bob"}
+{"id": "3", "name": "Carol"}
+EOF
+java -jar json-schema-analyzer-<version>.jar -i samples.ndjson -j
+```
+
+would produce the following output
+
+```json
+{
+  "email?" : "string",
+  "id" : "integer|string",
+  "name" : "string"
+}
+```
+
+It composes with `-s` and `-l` the same way `-m` does. `-m` itself has no effect when `-j` is
+set, since NDJSON input is always merged.
+
+### Example6: JSON Schema Output
 
 Pass `-s`/`--json-schema` to print the shape as a real [JSON Schema draft-07](https://json-schema.org/specification-links.html#draft-7)
 document instead of the default compact notation — composes with `-m` the same way. Note that
@@ -333,7 +367,7 @@ would produce the following output
 }
 ```
 
-### Example6: LLM-Optimized Output
+### Example7: LLM-Optimized Output
 
 Pass `-l`/`--llm` to print the shape in a compact notation with no braces, quotes, or commas —
 nesting is indentation only, array-typed fields get a trailing `[]`, and optional/union fields
@@ -400,6 +434,10 @@ can pattern-match on it directly. `SchemaMerger.merge(a, b)` is available the sa
 multiple samples into one shape, exactly as the CLI's `-m` flag does internally. To render a shape
 the way the CLI does, use `Json.write(schema)` for the compact notation or
 `JsonSchemaWriter.toJsonSchema(schema)` for a draft-07 document.
+
+For newline-delimited JSON, `analyzer.parseJsonLines(inputStream)` reads a stream of
+whitespace-separated JSON values — one per line, by NDJSON convention — and merges them into a
+single shape, exactly as the CLI's `-j` flag does.
 
 Collections returned by `getFields()`, `getOptionalFields()`, and `getMembers()` are unmodifiable
 views. If you build shapes by hand rather than getting them from `parse()`, finish building a type

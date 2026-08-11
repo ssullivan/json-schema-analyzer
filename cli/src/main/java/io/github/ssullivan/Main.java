@@ -65,6 +65,10 @@ public final class Main {
                 description = "Treat each element of a top-level JSON array as one sample and merge them into a single shape")
         private boolean mergeSamples;
 
+        @CommandLine.Option(names = {"-j", "--jsonl"},
+                description = "Read the input as newline-delimited JSON (NDJSON), treating each value as one sample and merging them into a single shape, like -m does for a JSON array")
+        private boolean jsonLines;
+
         @CommandLine.Option(names = {"-s", "--json-schema"},
                 description = "Print the shape as a JSON Schema (draft-07) document instead of the default compact notation")
         boolean jsonSchema;
@@ -81,6 +85,11 @@ public final class Main {
 
             try (InputStream inputStream = file != null ? new FileInputStream(file) : System.in) {
                 JsonSchemaAnalyzer analyzer = new JsonSchemaAnalyzer();
+
+                if (jsonLines) {
+                    return analyzer.parseJsonLines(inputStream);
+                }
+
                 JsonType result = analyzer.parse(inputStream);
 
                 if (mergeSamples && result instanceof ArrayType arrayType) {

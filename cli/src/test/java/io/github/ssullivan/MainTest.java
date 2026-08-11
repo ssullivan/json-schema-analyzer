@@ -58,6 +58,36 @@ class MainTest {
     }
 
     @Test
+    void testJsonLinesFlagMergesEachLineAsASample(@TempDir Path tempDir) throws IOException {
+        Path file = writeJson(tempDir, "{\"id\": 1, \"name\": \"Alice\"}\n{\"id\": 2}\n");
+
+        CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+        int exitCode = commandLine.execute("-i", file.toString(), "-j");
+
+        assertEquals(0, exitCode);
+        JsonType result = commandLine.getExecutionResult();
+        assertInstanceOf(ObjectType.class, result);
+        ObjectType objectType = (ObjectType) result;
+        assertFalse(objectType.isOptional("id"));
+        assertTrue(objectType.isOptional("name"));
+    }
+
+    @Test
+    void testJsonLinesFlagReadsFromStdin() {
+        InputStream originalStdin = System.in;
+        System.setIn(new ByteArrayInputStream("{\"id\": 1}\n{\"id\": 2}\n".getBytes(StandardCharsets.UTF_8)));
+        try {
+            CommandLine commandLine = new CommandLine(new Main.JsonSchemaAnalyzeCommand());
+            int exitCode = commandLine.execute("-j");
+
+            assertEquals(0, exitCode);
+            assertEquals(ObjectType.of("id", ScalarType.INTEGER), commandLine.getExecutionResult());
+        } finally {
+            System.setIn(originalStdin);
+        }
+    }
+
+    @Test
     void testMergeFlagOnNonArrayRootLeavesResultUnchanged(@TempDir Path tempDir) throws IOException {
         Path file = writeJson(tempDir, "{\"id\": 1}");
 

@@ -40,21 +40,62 @@ public class JsonSchemaAnalyzer {
         try (JsonParser jParser = JSON_FACTORY.createParser(source)) {
             try {
                 jParser.nextToken();
-                JsonToken currentToken = jParser.currentToken();
-                if (currentToken == JsonToken.START_OBJECT) {
-                    ObjectType root = new ObjectType();
-                    handleObjectStruct(jParser, root);
-                    return root;
-                } else if (currentToken == JsonToken.START_ARRAY) {
-                    return handleObjectArray(jParser);
-                } else if (currentToken != null && currentToken.isScalarValue()) {
-                    return convertScalarToken(jParser, currentToken);
-                } else {
-                    throw JsonSchemaAnalysisException.unsupportedRoot(currentToken, jParser.currentLocation());
-                }
+                return parseRootValue(jParser, jParser.currentToken());
             } catch (JsonProcessingException e) {
                 throw JsonSchemaAnalysisException.malformedJson(e);
             }
+        }
+    }
+
+    /**
+     * Creates a single merged {@link JsonType} shape from newline-delimited JSON (NDJSON): a
+     * stream of whitespace-separated JSON values, one conventionally per line. Each value is
+     * treated as a sample and folded into the others via {@link SchemaMerger}, exactly as the
+     * CLI's {@code -m} flag does for elements of a JSON array — a field missing from some
+     * samples becomes optional, and one whose type varies across samples becomes a union.
+     * <p>
+     * Blank lines are ignored. Because Jackson treats all whitespace, including newlines, as
+     * insignificant between tokens, this also tolerates a value's JSON spanning multiple lines.
+     *
+     * @param source a non-null {@link InputStream} that contains NDJSON
+     * @return the merged shape of every value in the stream
+     * @throws IOException                if the source itself cannot be read (a genuine I/O
+     *                                     failure)
+     * @throws JsonSchemaAnalysisException if the source can be read but its content isn't
+     *                                     analyzable (malformed JSON, or no values at all)
+     */
+    public JsonType parseJsonLines(InputStream source) throws IOException {
+        Objects.requireNonNull(source, "The method parameter `source` must not be null");
+
+        try (JsonParser jParser = JSON_FACTORY.createParser(source)) {
+            try {
+                JsonType merged = null;
+                JsonToken token;
+                while ((token = jParser.nextToken()) != null) {
+                    JsonType value = parseRootValue(jParser, token);
+                    merged = merged == null ? value : SchemaMerger.merge(merged, value);
+                }
+                if (merged == null) {
+                    throw JsonSchemaAnalysisException.unsupportedRoot(null, jParser.currentLocation());
+                }
+                return merged;
+            } catch (JsonProcessingException e) {
+                throw JsonSchemaAnalysisException.malformedJson(e);
+            }
+        }
+    }
+
+    private static JsonType parseRootValue(JsonParser jParser, JsonToken currentToken) throws IOException {
+        if (currentToken == JsonToken.START_OBJECT) {
+            ObjectType root = new ObjectType();
+            handleObjectStruct(jParser, root);
+            return root;
+        } else if (currentToken == JsonToken.START_ARRAY) {
+            return handleObjectArray(jParser);
+        } else if (currentToken != null && currentToken.isScalarValue()) {
+            return convertScalarToken(jParser, currentToken);
+        } else {
+            throw JsonSchemaAnalysisException.unsupportedRoot(currentToken, jParser.currentLocation());
         }
     }
 
