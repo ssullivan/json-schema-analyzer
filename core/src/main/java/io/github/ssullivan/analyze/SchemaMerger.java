@@ -37,6 +37,9 @@ public final class SchemaMerger {
         if (isNumberish(a) && isNumberish(b)) {
             return ScalarType.NUMBER;
         }
+        if (isStringish(a) && isStringish(b)) {
+            return ScalarType.STRING;
+        }
         if (a instanceof ObjectType oa && b instanceof ObjectType ob) {
             return mergeObjects(oa, ob);
         }
@@ -75,6 +78,7 @@ public final class SchemaMerger {
         Set<JsonType> elements = new LinkedHashSet<>(aa.getFields());
         elements.addAll(ab.getFields());
         collapseNumbers(elements);
+        collapseStrings(elements);
 
         ArrayType result = new ArrayType();
         elements.forEach(result::addField);
@@ -86,6 +90,7 @@ public final class SchemaMerger {
         addFlattened(members, a);
         addFlattened(members, b);
         collapseNumbers(members);
+        collapseStrings(members);
 
         if (members.size() == 1) {
             return members.iterator().next();
@@ -110,5 +115,17 @@ public final class SchemaMerger {
 
     private static boolean isNumberish(JsonType type) {
         return type == ScalarType.INTEGER || type == ScalarType.FLOAT || type == ScalarType.NUMBER;
+    }
+
+    private static void collapseStrings(Set<JsonType> types) {
+        if (types.stream().filter(SchemaMerger::isStringish).count() > 1) {
+            types.removeIf(SchemaMerger::isStringish);
+            types.add(ScalarType.STRING);
+        }
+    }
+
+    private static boolean isStringish(JsonType type) {
+        return type == ScalarType.STRING || type == ScalarType.DATE
+                || type == ScalarType.DATE_TIME || type == ScalarType.UUID;
     }
 }

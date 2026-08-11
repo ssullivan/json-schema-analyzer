@@ -16,12 +16,30 @@ import java.util.Objects;
 public class JsonSchemaAnalyzer {
     private static final JsonFactory JSON_FACTORY = new JsonFactory();
 
+    private final boolean detectFormats;
+
     /**
-     * Creates an analyzer. Instances hold no state, so one can be reused across documents and
-     * shared between threads.
+     * Creates an analyzer with string format detection off. Instances are immutable and
+     * thread-safe, so one can be reused across documents and shared between threads.
      */
     public JsonSchemaAnalyzer() {
+        this(false);
+    }
 
+    /**
+     * Creates an analyzer, optionally opting in to string format detection. Instances are
+     * immutable and thread-safe, so one can be reused across documents and shared between
+     * threads.
+     *
+     * @param detectFormats when {@code true}, string values are checked against
+     *                      {@link StringFormatDetector} and may come back as
+     *                      {@link ScalarType#DATE}, {@link ScalarType#DATE_TIME}, or
+     *                      {@link ScalarType#UUID} instead of the generic {@link ScalarType#STRING}.
+     *                      Off by default (the no-arg constructor) so existing callers' output
+     *                      is unaffected unless they opt in.
+     */
+    public JsonSchemaAnalyzer(boolean detectFormats) {
+        this.detectFormats = detectFormats;
     }
 
     /**
@@ -85,7 +103,7 @@ public class JsonSchemaAnalyzer {
         }
     }
 
-    private static JsonType parseRootValue(JsonParser jParser, JsonToken currentToken) throws IOException {
+    private JsonType parseRootValue(JsonParser jParser, JsonToken currentToken) throws IOException {
         if (currentToken == JsonToken.START_OBJECT) {
             ObjectType root = new ObjectType();
             handleObjectStruct(jParser, root);
@@ -99,7 +117,7 @@ public class JsonSchemaAnalyzer {
         }
     }
 
-    private static void handleObjectStruct(JsonParser jParser, ObjectType objectType) throws IOException {
+    private void handleObjectStruct(JsonParser jParser, ObjectType objectType) throws IOException {
         while (jParser.nextToken() != JsonToken.END_OBJECT) {
             JsonToken currentToken = jParser.currentToken();
             String name = jParser.currentName();
@@ -124,7 +142,7 @@ public class JsonSchemaAnalyzer {
         }
     }
 
-    private static ArrayType handleObjectArray(JsonParser jParser) throws IOException {
+    private ArrayType handleObjectArray(JsonParser jParser) throws IOException {
         ArrayType arrayType = new ArrayType();
         while (jParser.nextToken() != JsonToken.END_ARRAY) {
             JsonToken currentToken = jParser.currentToken();
@@ -152,7 +170,7 @@ public class JsonSchemaAnalyzer {
      * @param jsonToken a non-null {@link JsonToken}
      * @return the {@link ScalarType} matching the token
      */
-    private static JsonType convertScalarToken(JsonParser jParser, JsonToken jsonToken) {
+    private JsonType convertScalarToken(JsonParser jParser, JsonToken jsonToken) throws IOException {
         if (jsonToken == null) {
             throw new NullPointerException("JsonToken must not be null");
         }
@@ -161,7 +179,7 @@ public class JsonSchemaAnalyzer {
             case VALUE_TRUE, VALUE_FALSE -> ScalarType.BOOLEAN;
             case VALUE_NUMBER_FLOAT -> ScalarType.FLOAT;
             case VALUE_NUMBER_INT -> ScalarType.INTEGER;
-            case VALUE_STRING -> ScalarType.STRING;
+            case VALUE_STRING -> detectFormats ? StringFormatDetector.detect(jParser.getText()) : ScalarType.STRING;
             case VALUE_NULL -> ScalarType.NULL;
             default -> throw JsonSchemaAnalysisException.unsupportedScalarToken(jsonToken, jParser.currentLocation());
         };
