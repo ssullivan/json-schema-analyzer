@@ -140,6 +140,83 @@ class JsonSchemaWriterTest {
     }
 
     @Test
+    void testDateScalarEmitsTypeAndFormat() {
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(ScalarType.DATE);
+
+        assertEquals("string", schema.get("type").asText());
+        assertEquals("date", schema.get("format").asText());
+    }
+
+    @Test
+    void testDateTimeScalarEmitsTypeAndFormat() {
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(ScalarType.DATE_TIME);
+
+        assertEquals("string", schema.get("type").asText());
+        assertEquals("date-time", schema.get("format").asText());
+    }
+
+    @Test
+    void testUuidScalarEmitsTypeAndFormat() {
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(ScalarType.UUID);
+
+        assertEquals("string", schema.get("type").asText());
+        assertEquals("uuid", schema.get("format").asText());
+    }
+
+    @Test
+    void testPlainStringScalarOmitsFormat() {
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(ScalarType.STRING);
+
+        assertFalse(schema.has("format"));
+    }
+
+    @Test
+    void testUnionOfPlainScalarsStillUsesTypeArray() {
+        // Regression guard: nothing formatted -> the compact "type": [...] fast path is untouched
+        UnionType unionType = new UnionType(Set.of(ScalarType.INTEGER, ScalarType.STRING));
+
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(unionType);
+
+        assertTrue(schema.get("type").isArray());
+        assertFalse(schema.has("anyOf"));
+    }
+
+    @Test
+    void testUnionOfFormattedAndPlainScalarUsesAnyOfNotTypeArray() {
+        UnionType unionType = new UnionType(Set.of(ScalarType.DATE, ScalarType.INTEGER));
+
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(unionType);
+
+        assertFalse(schema.has("type"));
+        assertTrue(schema.get("anyOf").isArray());
+        assertEquals(2, schema.get("anyOf").size());
+
+        boolean anyMemberHasDateFormat = false;
+        for (var member : schema.get("anyOf")) {
+            if (member.has("format") && "date".equals(member.get("format").asText())) {
+                anyMemberHasDateFormat = true;
+            }
+        }
+        assertTrue(anyMemberHasDateFormat);
+    }
+
+    @Test
+    void testUnionOfTwoDifferentFormatsUsesAnyOf() {
+        UnionType unionType = new UnionType(Set.of(ScalarType.DATE, ScalarType.UUID));
+
+        ObjectNode schema = JsonSchemaWriter.toJsonSchema(unionType);
+
+        assertTrue(schema.get("anyOf").isArray());
+        assertEquals(2, schema.get("anyOf").size());
+
+        List<String> formats = new ArrayList<>();
+        for (var member : schema.get("anyOf")) {
+            formats.add(member.get("format").asText());
+        }
+        assertEquals(Set.of("date", "uuid"), Set.copyOf(formats));
+    }
+
+    @Test
     void testToJsonSchemaRejectsNull() {
         assertThrows(NullPointerException.class, () -> JsonSchemaWriter.toJsonSchema(null));
     }

@@ -117,6 +117,59 @@ class SchemaMergerTest {
     }
 
     @Test
+    void testDifferentStringFormatsCollapseToString() {
+        ObjectType a = ObjectType.of("x", ScalarType.DATE);
+        ObjectType b = ObjectType.of("x", ScalarType.UUID);
+
+        JsonType merged = SchemaMerger.merge(a, b);
+
+        assertEquals(ObjectType.of("x", ScalarType.STRING), merged);
+    }
+
+    @Test
+    void testFormattedStringAndPlainStringCollapseToString() {
+        ObjectType a = ObjectType.of("x", ScalarType.DATE);
+        ObjectType b = ObjectType.of("x", ScalarType.STRING);
+
+        JsonType merged = SchemaMerger.merge(a, b);
+
+        assertEquals(ObjectType.of("x", ScalarType.STRING), merged);
+    }
+
+    @Test
+    void testStringFormatDoesNotCollapseAgainstNonStringTypes() {
+        ObjectType a = ObjectType.of("x", ScalarType.DATE);
+        ObjectType b = ObjectType.of("x", ScalarType.INTEGER);
+
+        JsonType merged = SchemaMerger.merge(a, b);
+
+        assertInstanceOf(ObjectType.class, merged);
+        JsonType xType = ((ObjectType) merged).getFields().get("x");
+        assertInstanceOf(UnionType.class, xType);
+        assertEquals(Set.of(ScalarType.DATE, ScalarType.INTEGER), ((UnionType) xType).getMembers());
+    }
+
+    @Test
+    void testMergingArraysWithConflictingStringFormatsCollapsesElements() {
+        ArrayType a = ArrayType.of(ScalarType.DATE);
+        ArrayType b = ArrayType.of(ScalarType.UUID);
+
+        JsonType merged = SchemaMerger.merge(a, b);
+
+        assertEquals(ArrayType.of(ScalarType.STRING), merged);
+    }
+
+    @Test
+    void testSameStringFormatOnBothSidesStaysThatFormat() {
+        ObjectType a = ObjectType.of("x", ScalarType.DATE);
+        ObjectType b = ObjectType.of("x", ScalarType.DATE);
+
+        JsonType merged = SchemaMerger.merge(a, b);
+
+        assertEquals(ObjectType.of("x", ScalarType.DATE), merged);
+    }
+
+    @Test
     void testMergeRejectsNullArguments() {
         assertThrows(NullPointerException.class, () -> SchemaMerger.merge(null, ScalarType.STRING));
         assertThrows(NullPointerException.class, () -> SchemaMerger.merge(ScalarType.STRING, null));

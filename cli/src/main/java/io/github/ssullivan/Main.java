@@ -69,6 +69,10 @@ public final class Main {
                 description = "Read the input as newline-delimited JSON (NDJSON), treating each value as one sample and merging them into a single shape, like -m does for a JSON array")
         private boolean jsonLines;
 
+        @CommandLine.Option(names = {"-f", "--detect-formats"},
+                description = "Detect string formats (date, date-time, uuid) instead of reporting every string as the generic \"string\" type")
+        private boolean detectFormats;
+
         @CommandLine.Option(names = {"-s", "--json-schema"},
                 description = "Print the shape as a JSON Schema (draft-07) document instead of the default compact notation")
         boolean jsonSchema;
@@ -84,7 +88,7 @@ public final class Main {
             }
 
             try (InputStream inputStream = file != null ? new FileInputStream(file) : System.in) {
-                JsonSchemaAnalyzer analyzer = new JsonSchemaAnalyzer();
+                JsonSchemaAnalyzer analyzer = new JsonSchemaAnalyzer(detectFormats);
 
                 if (jsonLines) {
                     return analyzer.parseJsonLines(inputStream);
