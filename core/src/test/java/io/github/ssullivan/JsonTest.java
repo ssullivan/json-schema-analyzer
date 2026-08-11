@@ -128,6 +128,47 @@ class JsonTest {
     }
 
     @Test
+    void testEnumRendersAsSortedPipeJoinedValues() throws Exception {
+        assertEquals("\"a|b|c\"", Json.write(EnumType.of("b", "a", "c")));
+    }
+
+    @Test
+    void testSingleValueEnumRendersAsPlainString() throws Exception {
+        assertEquals("\"string\"", Json.write(EnumType.of("active")));
+    }
+
+    @Test
+    void testEnumFieldInsideObjectRendersInline() throws Exception {
+        ObjectType root = ObjectType.of("status", EnumType.of("open", "closed"));
+
+        assertEquals("""
+                {
+                  "status" : "closed|open"
+                }""", Json.write(root));
+    }
+
+    @Test
+    void testUnionWithMultiValueEnumMemberCollapsesToGenericStringLabel() throws Exception {
+        // A multi-value EnumType's own toString() is already a pipe-joined list; if it were
+        // treated as one more atomic union member label, "closed|open" nested inside the outer
+        // "|"-join would be indistinguishable from a 3-way union/enum of "closed", "open", and
+        // "integer". It must collapse to the generic "string" label instead, exactly like an
+        // ObjectType/ArrayType member does.
+        UnionType union = new UnionType(Set.of(ScalarType.INTEGER, EnumType.of("open", "closed")));
+
+        assertEquals("\"integer|string\"", Json.write(union));
+    }
+
+    @Test
+    void testUnionWithEnumAndPlainStringMembersDedupesGenericLabel() throws Exception {
+        // Both an EnumType member and a plain STRING member collapse to the same "string"
+        // label; without deduping, this would render as "string|string"
+        UnionType union = new UnionType(Set.of(ScalarType.STRING, EnumType.of("open", "closed")));
+
+        assertEquals("\"string\"", Json.write(union));
+    }
+
+    @Test
     void testMatchesTheReadmeExampleOutput() throws Exception {
         // The exact document from README "Example1: JSON Object".
         ObjectType product = new ObjectType();

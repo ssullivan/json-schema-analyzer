@@ -16,7 +16,11 @@ import java.util.stream.Collectors;
  * heterogeneous types join their member labels with {@code |} the same way that class's
  * {@link UnionType} handling does — including collapsing an {@link ObjectType} or {@link ArrayType}
  * member down to the generic label {@code "object"}/{@code "array"}, since a fully nested
- * sub-shape doesn't fit on one joined line.
+ * sub-shape doesn't fit on one joined line, and likewise collapsing a multi-value
+ * {@link EnumType} member down to {@code "string"} when it's one of several members being
+ * joined, since its own pipe-joined value list can't be nested inside an outer pipe-joined
+ * member list without becoming ambiguous. A field whose sole type is an {@code EnumType} still
+ * shows its full value list — the collapse only applies when flattening it alongside others.
  */
 public final class LlmWriter {
     private LlmWriter() {
@@ -109,7 +113,7 @@ public final class LlmWriter {
         }
 
         String joined = elements.stream()
-                .map(LlmWriter::memberLabel)
+                .map(LlmWriter::flattenedMemberLabel)
                 .distinct()
                 .sorted()
                 .collect(Collectors.joining("|"));
@@ -119,10 +123,26 @@ public final class LlmWriter {
     private static String inlineLabel(JsonType type) {
         if (type instanceof UnionType unionType) {
             return unionType.getMembers().stream()
-                    .map(LlmWriter::memberLabel)
+                    .map(LlmWriter::flattenedMemberLabel)
                     .distinct()
                     .sorted()
                     .collect(Collectors.joining("|"));
+        }
+        return memberLabel(type);
+    }
+
+    /**
+     * Like {@link #memberLabel}, but additionally collapses a multi-value {@link EnumType} down
+     * to the generic {@code "string"} label. Used only when flattening more than one member
+     * shape into a single joined line — a {@link UnionType}'s members, or a heterogeneous
+     * {@link ArrayType}'s element shapes — where nesting an {@code EnumType}'s own pipe-joined
+     * value list inside that outer pipe-joined line would be ambiguous. Not used when a type is
+     * a field's sole/direct type ({@link #memberLabel} is used there instead), since there's no
+     * outer join for its values to be confused with in that case.
+     */
+    private static String flattenedMemberLabel(JsonType type) {
+        if (type instanceof EnumType) {
+            return "string";
         }
         return memberLabel(type);
     }

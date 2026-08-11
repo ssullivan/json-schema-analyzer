@@ -180,6 +180,38 @@ class LlmWriterTest {
     }
 
     @Test
+    void testEnumFieldRendersAsSortedPipeJoinedValues() {
+        ObjectType root = ObjectType.of("status", EnumType.of("b", "a"));
+
+        assertEquals("status: a|b", LlmWriter.write(root));
+    }
+
+    @Test
+    void testSingleValueEnumFieldRendersAsPlainString() {
+        ObjectType root = ObjectType.of("status", EnumType.of("active"));
+
+        assertEquals("status: string", LlmWriter.write(root));
+    }
+
+    @Test
+    void testHeterogeneousArrayWithMultiValueEnumElementCollapsesToGenericStringLabel() {
+        ObjectType root = ObjectType.of("values", ArrayType.of(ScalarType.INTEGER, EnumType.of("open", "closed")));
+
+        assertEquals("values[]: integer|string", LlmWriter.write(root));
+    }
+
+    @Test
+    void testUnionWithMultiValueEnumMemberCollapsesToGenericStringLabel() {
+        // Nesting a multi-value EnumType's own pipe-joined values inside the outer union join
+        // would be ambiguous (e.g. indistinguishable from a 3-way union); it must collapse to
+        // the generic "string" label instead, exactly like an ObjectType/ArrayType member does.
+        ObjectType root = new ObjectType();
+        root.addField("id", new UnionType(Set.of(ScalarType.INTEGER, EnumType.of("open", "closed"))));
+
+        assertEquals("id: integer|string", LlmWriter.write(root));
+    }
+
+    @Test
     void testWriteRejectsNull() {
         assertThrows(NullPointerException.class, () -> LlmWriter.write(null));
     }

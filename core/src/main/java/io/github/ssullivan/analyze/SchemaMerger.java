@@ -34,6 +34,11 @@ public final class SchemaMerger {
         if (a.equals(b)) {
             return a;
         }
+        if (a instanceof EnumType ea && b instanceof EnumType eb) {
+            Set<String> union = new LinkedHashSet<>(ea.getValues());
+            union.addAll(eb.getValues());
+            return union.size() <= EnumType.MAX_VALUES ? new EnumType(union) : ScalarType.STRING;
+        }
         if (isNumberish(a) && isNumberish(b)) {
             return ScalarType.NUMBER;
         }
@@ -126,6 +131,7 @@ public final class SchemaMerger {
 
     private static boolean isStringish(JsonType type) {
         return type == ScalarType.STRING || type == ScalarType.DATE
-                || type == ScalarType.DATE_TIME || type == ScalarType.UUID;
+                || type == ScalarType.DATE_TIME || type == ScalarType.UUID
+                || type instanceof EnumType;
     }
 }

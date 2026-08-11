@@ -51,6 +51,9 @@ public final class JsonSchemaWriter {
         if (type instanceof UnionType unionType) {
             return unionSchema(unionType);
         }
+        if (type instanceof EnumType enumType) {
+            return enumSchema(enumType);
+        }
         throw new IllegalArgumentException("Unsupported JsonType: " + type);
     }
 
@@ -60,6 +63,23 @@ public final class JsonSchemaWriter {
         String format = jsonSchemaFormat(scalarType);
         if (format != null) {
             node.put("format", format);
+        }
+        return node;
+    }
+
+    /**
+     * A single-value enum renders exactly like plain {@link ScalarType#STRING} (no {@code enum}
+     * array), matching {@link EnumType#toString()}'s equivalent rule for the compact/LLM
+     * notations, so a field that merely happens to be constant across a small sample never leaks
+     * that value.
+     */
+    private static ObjectNode enumSchema(EnumType enumType) {
+        ObjectNode node = JsonNodeFactory.instance.objectNode();
+        node.put("type", "string");
+        Set<String> values = enumType.getValues();
+        if (values.size() > 1) {
+            ArrayNode enumNode = node.putArray("enum");
+            values.stream().sorted().forEach(enumNode::add);
         }
         return node;
     }

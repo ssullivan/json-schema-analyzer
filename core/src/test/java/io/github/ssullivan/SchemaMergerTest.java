@@ -170,6 +170,79 @@ class SchemaMergerTest {
     }
 
     @Test
+    void testMergingTwoEnumTypesUnionsTheirValues() {
+        JsonType merged = SchemaMerger.merge(EnumType.of("open"), EnumType.of("closed"));
+
+        assertEquals(EnumType.of("open", "closed"), merged);
+    }
+
+    @Test
+    void testMergingIdenticalEnumTypesReturnsSameValue() {
+        JsonType merged = SchemaMerger.merge(EnumType.of("open"), EnumType.of("open"));
+
+        assertEquals(EnumType.of("open"), merged);
+    }
+
+    @Test
+    void testMergingEnumTypesUpToCapStaysEnum() {
+        EnumType a = EnumType.of("a", "b", "c");
+        EnumType b = EnumType.of("c", "d", "e");
+
+        JsonType merged = SchemaMerger.merge(a, b);
+
+        assertEquals(EnumType.of("a", "b", "c", "d", "e"), merged);
+    }
+
+    @Test
+    void testMergingEnumTypesPastCapCollapsesToString() {
+        EnumType a = EnumType.of("a", "b", "c");
+        EnumType b = EnumType.of("d", "e", "f");
+
+        JsonType merged = SchemaMerger.merge(a, b);
+
+        assertEquals(ScalarType.STRING, merged);
+    }
+
+    @Test
+    void testEnumTypeCollidingWithDateCollapsesToString() {
+        JsonType merged = SchemaMerger.merge(EnumType.of("a"), ScalarType.DATE);
+
+        assertEquals(ScalarType.STRING, merged);
+    }
+
+    @Test
+    void testEnumTypeCollidingWithUuidCollapsesToString() {
+        JsonType merged = SchemaMerger.merge(EnumType.of("a"), ScalarType.UUID);
+
+        assertEquals(ScalarType.STRING, merged);
+    }
+
+    @Test
+    void testEnumTypeCollidingWithPlainStringCollapsesToString() {
+        JsonType merged = SchemaMerger.merge(EnumType.of("a"), ScalarType.STRING);
+
+        assertEquals(ScalarType.STRING, merged);
+    }
+
+    @Test
+    void testEnumTypeDoesNotCollapseAgainstNonStringTypes() {
+        JsonType merged = SchemaMerger.merge(EnumType.of("a"), ScalarType.INTEGER);
+
+        assertInstanceOf(UnionType.class, merged);
+        assertEquals(Set.of(EnumType.of("a"), ScalarType.INTEGER), ((UnionType) merged).getMembers());
+    }
+
+    @Test
+    void testMergingArraysWithHandBuiltEnumTypesCollapsesViaCollapseStrings() {
+        ArrayType a = ArrayType.of(EnumType.of("x"));
+        ArrayType b = ArrayType.of(EnumType.of("y"));
+
+        JsonType merged = SchemaMerger.merge(a, b);
+
+        assertEquals(ArrayType.of(ScalarType.STRING), merged);
+    }
+
+    @Test
     void testMergeRejectsNullArguments() {
         assertThrows(NullPointerException.class, () -> SchemaMerger.merge(null, ScalarType.STRING));
         assertThrows(NullPointerException.class, () -> SchemaMerger.merge(ScalarType.STRING, null));
